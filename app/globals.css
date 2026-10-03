@@ -1,0 +1,512 @@
+@import "tailwindcss";
+
+/* ---------- Bảng màu: giấy kẻ ô, mực xanh đen, bút dạ quang ---------- */
+:root {
+  --paper: #f3f6fa;
+  --surface: #ffffff;
+  --sunken: #e9eef5;
+  --ink: #16213e;
+  --ink-2: #46536f;
+  --ink-3: #8491a9;
+  --rule: #d6deea;
+  --pen: #2346d9;
+  --pen-soft: #e3e9ff;
+  --on-pen: #ffffff;
+
+  --l1: #0f9467;
+  --l1-soft: #d9f5e9;
+  --l2: #c77a00;
+  --l2-soft: #fdf0d6;
+  --l3: #7446dc;
+  --l3-soft: #ece5fd;
+
+  /* bàn cờ */
+  --bd-bg: #ffffff;
+  --bd-line: #c9d2e0;
+  --bd-box: #16213e;
+  --bd-given: #16213e;
+  --bd-placed: #2346d9;
+  --bd-cand: #7b879d;
+  --t-unit: rgba(35, 70, 217, 0.07);
+  --t-focus: #ffe45c;
+  --t-pattern: #c9f2da;
+  --t-pattern2: #e3daff;
+  --t-blocked: #fff6dc;
+  --t-elim: #ffe0dd;
+  --t-colorA: #cfe1ff;
+  --t-colorB: #ffe0c2;
+  --m-focus: #ffd43b;
+  --m-pattern: #7fdca6;
+  --m-pattern2: #b9a5ff;
+  --m-colorA: #83b4ff;
+  --m-colorB: #ffb36b;
+  --m-elim: #ffc2bd;
+  --elim: #d92d2d;
+  --hatch: #f1cd72;
+  --ray: #ffb300;
+  --ray-ink: #b86e00;
+  --ray-soft: rgba(255, 179, 0, 0.16);
+  --link: #2346d9;
+  --link-weak: #d92d2d;
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --paper: #0d1322;
+  --surface: #141c30;
+  --sunken: #1b2540;
+  --ink: #e6ebf5;
+  --ink-2: #b0bbd2;
+  --ink-3: #7684a0;
+  --rule: #28334d;
+  --pen: #86a4ff;
+  --pen-soft: #1f2b52;
+  --on-pen: #0d1322;
+
+  --l1: #3fd49f;
+  --l1-soft: #11342b;
+  --l2: #f5b544;
+  --l2-soft: #3a2c10;
+  --l3: #ab8cff;
+  --l3-soft: #2a2150;
+
+  --bd-bg: #141c30;
+  --bd-line: #2b3753;
+  --bd-box: #c8d2e6;
+  --bd-given: #e6ebf5;
+  --bd-placed: #8fb0ff;
+  --bd-cand: #8391ad;
+  --t-unit: rgba(134, 164, 255, 0.09);
+  --t-focus: #6b5a0c;
+  --t-pattern: #164b33;
+  --t-pattern2: #33296b;
+  --t-blocked: #272112;
+  --t-elim: #4d1c22;
+  --t-colorA: #1b3767;
+  --t-colorB: #5a3413;
+  --m-focus: #c9a813;
+  --m-pattern: #2f9a66;
+  --m-pattern2: #6f5bd1;
+  --m-colorA: #3d6fd0;
+  --m-colorB: #c7702a;
+  --m-elim: #7a2a31;
+  --elim: #ff7a7a;
+  --hatch: #5a481b;
+  --ray: #ffc53d;
+  --ray-ink: #ffcf66;
+  --ray-soft: rgba(255, 197, 61, 0.14);
+  --link: #8fb0ff;
+  --link-weak: #ff8a8a;
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d1322;
+    --surface: #141c30;
+    --sunken: #1b2540;
+    --ink: #e6ebf5;
+    --ink-2: #b0bbd2;
+    --ink-3: #7684a0;
+    --rule: #28334d;
+    --pen: #86a4ff;
+    --pen-soft: #1f2b52;
+    --on-pen: #0d1322;
+  --on-pen: #0d1322;
+    --l1: #3fd49f;
+    --l1-soft: #11342b;
+    --l2: #f5b544;
+    --l2-soft: #3a2c10;
+    --l3: #ab8cff;
+    --l3-soft: #2a2150;
+    --bd-bg: #141c30;
+    --bd-line: #2b3753;
+    --bd-box: #c8d2e6;
+    --bd-given: #e6ebf5;
+    --bd-placed: #8fb0ff;
+    --bd-cand: #8391ad;
+    --t-unit: rgba(134, 164, 255, 0.09);
+    --t-focus: #6b5a0c;
+    --t-pattern: #164b33;
+    --t-pattern2: #33296b;
+    --t-blocked: #272112;
+    --t-elim: #4d1c22;
+    --t-colorA: #1b3767;
+    --t-colorB: #5a3413;
+    --m-focus: #c9a813;
+    --m-pattern: #2f9a66;
+    --m-pattern2: #6f5bd1;
+    --m-colorA: #3d6fd0;
+    --m-colorB: #c7702a;
+    --m-elim: #7a2a31;
+    --elim: #ff7a7a;
+    --hatch: #5a481b;
+    --ray: #ffc53d;
+    --ray-ink: #ffcf66;
+    --ray-soft: rgba(255, 197, 61, 0.14);
+    --link: #8fb0ff;
+    --link-weak: #ff8a8a;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-rule: var(--rule);
+  --color-pen: var(--pen);
+  --color-pen-soft: var(--pen-soft);
+  --color-on-pen: var(--on-pen);
+  --color-l1: var(--l1);
+  --color-l2: var(--l2);
+  --color-l3: var(--l3);
+  --color-elim: var(--elim);
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-body), sans-serif;
+  --font-hand: var(--font-hand), cursive;
+}
+
+@layer base {
+html {
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.65;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--t-focus);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2.5px solid var(--pen);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+a {
+  color: inherit;
+}
+
+}
+
+/* Cấp độ: màu mã hoá tầng suy luận */
+[data-level="1"] {
+  --lv: var(--l1);
+  --lv-soft: var(--l1-soft);
+}
+[data-level="2"] {
+  --lv: var(--l2);
+  --lv-soft: var(--l2-soft);
+}
+[data-level="3"] {
+  --lv: var(--l3);
+  --lv-soft: var(--l3-soft);
+}
+
+@layer components {
+/* Nền giấy kẻ ô cho phần mở đầu */
+.graph-paper {
+  background-image:
+    linear-gradient(var(--rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: -1px -1px;
+}
+
+/* Văn bản dài */
+.prose-vi p {
+  margin: 0 0 1em;
+}
+.prose-vi strong {
+  font-weight: 650;
+}
+
+/* ---------- Bàn cờ SVG ---------- */
+.board {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+.board text,
+.legend-svg text {
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.bd-bg {
+  fill: var(--bd-bg);
+}
+.bd-line line {
+  stroke: var(--bd-line);
+  stroke-width: 1;
+}
+.bd-line-box line {
+  stroke: var(--bd-box);
+  stroke-width: 2.4;
+}
+.bd-frame {
+  fill: none;
+  stroke: var(--bd-box);
+  stroke-width: 3.2;
+}
+.bd-label text {
+  fill: var(--ink-3);
+  font-size: 13px;
+  font-weight: 500;
+}
+.bd-given {
+  fill: var(--bd-given);
+  font-size: 30px;
+  font-weight: 600;
+}
+.bd-placed {
+  fill: var(--bd-placed);
+  font-family: var(--font-hand);
+  font-weight: 600;
+  font-size: 40px;
+}
+.bd-new {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: write-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes write-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.bd-cand {
+  fill: var(--bd-cand);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.bd-cand-on {
+  fill: var(--ink);
+  font-weight: 700;
+}
+.bd-cand-gone {
+  fill: var(--elim);
+  font-weight: 700;
+}
+.bd-strike {
+  stroke: var(--elim);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.bd-t-unit {
+  fill: var(--t-unit);
+}
+.bd-t-focus {
+  fill: var(--t-focus);
+}
+.bd-t-pattern {
+  fill: var(--t-pattern);
+}
+.bd-t-pattern2 {
+  fill: var(--t-pattern2);
+}
+.bd-t-elim {
+  fill: var(--t-elim);
+}
+.bd-t-colorA {
+  fill: var(--t-colorA);
+}
+.bd-t-colorB {
+  fill: var(--t-colorB);
+}
+.bd-t-blocked {
+  fill: url(#hatch);
+}
+.bd-m-focus {
+  fill: var(--m-focus);
+}
+.bd-m-pattern {
+  fill: var(--m-pattern);
+}
+.bd-m-pattern2 {
+  fill: var(--m-pattern2);
+}
+.bd-m-colorA {
+  fill: var(--m-colorA);
+}
+.bd-m-colorB {
+  fill: var(--m-colorB);
+}
+.bd-m-elim {
+  fill: var(--m-elim);
+}
+.board-thumb .bd-t-pattern {
+  fill: var(--m-pattern);
+}
+.board-thumb .bd-t-pattern2 {
+  fill: var(--m-pattern2);
+}
+.board-thumb .bd-t-focus {
+  fill: var(--m-focus);
+}
+.board-thumb .bd-t-elim {
+  fill: var(--elim);
+  opacity: 0.55;
+}
+.board-thumb .bd-t-colorA {
+  fill: var(--m-colorA);
+}
+.board-thumb .bd-t-colorB {
+  fill: var(--m-colorB);
+}
+.board-thumb .bd-t-unit {
+  fill: none;
+}
+.board-thumb .bd-line line {
+  stroke-width: 1.5;
+}
+.bd-unit-outline {
+  fill: none;
+  stroke: var(--pen);
+  stroke-width: 2.5;
+  opacity: 0.75;
+}
+.bd-ray {
+  fill: none;
+  stroke: var(--ray);
+  stroke-width: 9;
+  stroke-linecap: butt;
+  opacity: 0.55;
+  stroke-dasharray: 1000;
+  animation: ray-in 600ms ease-out both;
+}
+@keyframes ray-in {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.bd-strong {
+  fill: none;
+  stroke: var(--link);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+.bd-ring {
+  fill: var(--ray-soft);
+  stroke: var(--ray-ink);
+  stroke-width: 2.4;
+}
+.bd-cross {
+  fill: none;
+  stroke: var(--ray-ink);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  opacity: 0.8;
+}
+.bd-sight {
+  fill: none;
+  stroke: var(--ray-ink);
+  stroke-width: 3;
+  stroke-dasharray: 0.1 6;
+  stroke-linecap: round;
+}
+.bd-weak {
+  fill: none;
+  stroke: var(--link-weak);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  stroke-linecap: round;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bd-new,
+  .bd-ray {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ---------- In bảng tóm tắt ---------- */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    font-size: 11pt;
+  }
+  .print-avoid {
+    break-inside: avoid;
+  }
+}
+
+/* ---------- Bố cục trang kỹ thuật ---------- */
+.tech-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "head" "ex" "body";
+  column-gap: 48px;
+  row-gap: 32px;
+}
+.tl-nav {
+  display: none;
+  grid-area: nav;
+}
+.tl-head {
+  grid-area: head;
+}
+.tl-ex {
+  grid-area: ex;
+}
+.tl-body {
+  grid-area: body;
+}
+@media (min-width: 1024px) {
+  .tech-layout {
+    grid-template-columns: minmax(0, 1fr) 440px;
+    grid-template-areas: "head ex" "body ex";
+    grid-template-rows: auto 1fr;
+  }
+  .tl-ex {
+    position: sticky;
+    top: 88px;
+    align-self: start;
+  }
+}
+@media (min-width: 1280px) {
+  .tech-layout {
+    grid-template-columns: 200px minmax(0, 1fr) 480px;
+    grid-template-areas: "nav head ex" "nav body ex";
+  }
+  .tl-nav {
+    display: block;
+    position: sticky;
+    top: 88px;
+    align-self: start;
+    max-height: calc(100vh - 110px);
+    overflow-y: auto;
+  }
+}
+
+}
