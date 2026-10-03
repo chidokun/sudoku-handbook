@@ -15,6 +15,22 @@ npm install
 npm run dev
 ```
 
+## Deploy lên GitHub Pages
+
+Site được xuất tĩnh (`output: "export"`) ra thư mục `out/`. Workflow [.github/workflows/deploy.yml](.github/workflows/deploy.yml) tự build và deploy mỗi khi push lên `main` (hoặc chạy tay ở tab Actions).
+
+Thiết lập một lần: vào **Settings → Pages → Build and deployment → Source**, chọn **GitHub Actions**.
+
+Workflow lấy đường dẫn con của site (ví dụ `/sudoku-handbook`) từ `actions/configure-pages` và truyền vào `PAGES_BASE_PATH`. Nếu sau này dùng tên miền riêng, đường dẫn này tự thành rỗng, không cần sửa code.
+
+Thử bản build giống CI ở máy:
+
+```bash
+PAGES_BASE_PATH=/sudoku-handbook npm run build
+```
+
+Build không có `PAGES_BASE_PATH` rồi chạy `npm start` để xem thư mục `out/` ở gốc `/`.
+
 ## Dữ liệu ví dụ
 
 Ví dụ không viết tay mà được sinh bởi bộ giải trong `lib/sudoku/`:

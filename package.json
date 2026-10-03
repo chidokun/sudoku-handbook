@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "npx serve@latest out",
     "lint": "eslint",
     "examples": "node scripts/build-examples.ts 40000 2026",
     "check:solver": "node scripts/check-solver.ts 5000"
