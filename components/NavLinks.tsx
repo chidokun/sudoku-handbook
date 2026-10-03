@@ -3,21 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { NAV } from "@/lib/nav";
+import { t, type Lang } from "@/lib/i18n";
+import { isNavActive, navItems } from "@/lib/nav";
 
-
-function isActive(path: string, href: string) {
-  if (href === "/ky-thuat") return path.startsWith("/ky-thuat") || path.startsWith("/suy-luan");
-  return path.startsWith(href);
-}
-
-export function NavLinks() {
+export function NavLinks({ lang }: { lang: Lang }) {
   const path = usePathname();
   return (
-    <nav aria-label="Điều hướng chính" className="hidden md:block">
+    <nav aria-label={t(lang).navLabel} className="hidden md:block">
       <ul className="flex items-center gap-1">
-        {NAV.map((n) => {
-          const on = isActive(path, n.href);
+        {navItems(lang).map((n) => {
+          const on = isNavActive(lang, n.key, path);
           return (
             <li key={n.href}>
               <Link
@@ -37,7 +32,8 @@ export function NavLinks() {
   );
 }
 
-export function MobileNav() {
+export function MobileNav({ lang }: { lang: Lang }) {
+  const L = t(lang);
   const path = usePathname();
   const [openPath, setOpenPath] = useState<string | null>(null);
   // Đóng menu khi chuyển trang: menu chỉ mở cho đúng đường dẫn đã bấm.
@@ -50,7 +46,7 @@ export function MobileNav() {
         aria-expanded={open}
         aria-controls="mobile-nav"
         className="grid h-9 w-9 place-items-center rounded-lg text-ink-2 hover:bg-sunken"
-        aria-label={open ? "Đóng menu" : "Mở menu"}
+        aria-label={open ? L.closeMenu : L.openMenu}
       >
         <svg viewBox="0 0 20 20" className="h-5 w-5" aria-hidden="true">
           {open ? (
@@ -61,20 +57,23 @@ export function MobileNav() {
         </svg>
       </button>
       {open && (
-        <nav id="mobile-nav" aria-label="Điều hướng chính" className="absolute inset-x-0 top-full border-b border-rule bg-surface px-4 py-3 shadow-lg">
+        <nav id="mobile-nav" aria-label={L.navLabel} className="absolute inset-x-0 top-full border-b border-rule bg-surface px-4 py-3 shadow-lg">
           <ul className="grid gap-1">
-            {NAV.map((n) => (
-              <li key={n.href}>
-                <Link
-                  href={n.href}
-                  onClick={() => setOpenPath(null)}
-                  aria-current={isActive(path, n.href) ? "page" : undefined}
-                  className={`block rounded-lg px-3 py-2.5 no-underline ${isActive(path, n.href) ? "bg-sunken font-semibold" : "text-ink-2"}`}
-                >
-                  {n.label}
-                </Link>
-              </li>
-            ))}
+            {navItems(lang).map((n) => {
+              const on = isNavActive(lang, n.key, path);
+              return (
+                <li key={n.href}>
+                  <Link
+                    href={n.href}
+                    onClick={() => setOpenPath(null)}
+                    aria-current={on ? "page" : undefined}
+                    className={`block rounded-lg px-3 py-2.5 no-underline ${on ? "bg-sunken font-semibold" : "text-ink-2"}`}
+                  >
+                    {n.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
       )}

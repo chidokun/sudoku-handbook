@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { t, techHref, type Lang } from "@/lib/i18n";
 import { PEERS, basicCandidates, bit, cellName, parseGrid } from "@/lib/sudoku/core";
 import type { Frame, Walkthrough as WalkData } from "@/lib/sudoku/types";
 import { Board } from "./Board";
@@ -13,7 +14,8 @@ interface TechMeta {
   level: number;
 }
 
-export function Walkthrough({ data, techs }: { data: WalkData; techs: Record<string, TechMeta> }) {
+export function Walkthrough({ data, techs, lang }: { data: WalkData; techs: Record<string, TechMeta>; lang: Lang }) {
+  const L = t(lang).walk;
   const n = data.steps.length;
   // Trạng thái trước mỗi bước: states[k] = sau khi áp dụng k bước đầu.
   const states = useMemo(() => {
@@ -57,7 +59,7 @@ export function Walkthrough({ data, techs }: { data: WalkData; techs: Record<str
     <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
       <div className="lg:sticky lg:top-[88px]">
         <div className="rounded-2xl border border-rule bg-surface p-2 sm:p-3">
-          <Board grid={state.grid} givens={data.puzzle} cands={state.cands} frame={frame} showCands={showCands} label={`Giải mẫu, bước ${i}`} />
+          <Board grid={state.grid} givens={data.puzzle} cands={state.cands} frame={frame} showCands={showCands} label={L.label(i)} />
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button
@@ -66,7 +68,7 @@ export function Walkthrough({ data, techs }: { data: WalkData; techs: Record<str
             disabled={i === 0}
             className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-rule px-3 text-sm font-medium disabled:opacity-40"
           >
-            <Chevron dir="left" /> Bước trước
+            <Chevron dir="left" /> {t(lang).player.prev}
           </button>
           <button
             type="button"
@@ -74,11 +76,11 @@ export function Walkthrough({ data, techs }: { data: WalkData; techs: Record<str
             disabled={i === n + 1}
             className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-pen px-4 text-sm font-semibold text-on-pen disabled:opacity-40"
           >
-            Bước tiếp <Chevron dir="right" />
+            {t(lang).player.next} <Chevron dir="right" />
           </button>
           <label className="ml-auto inline-flex cursor-pointer items-center gap-2 text-sm text-ink-2">
             <input type="checkbox" className="h-4 w-4 accent-[var(--pen)]" checked={always} onChange={(e) => setAlways(e.target.checked)} />
-            Luôn hiện ứng viên
+            {L.always}
           </label>
         </div>
         <input
@@ -88,7 +90,7 @@ export function Walkthrough({ data, techs }: { data: WalkData; techs: Record<str
           value={i}
           onChange={(e) => setI(Number(e.target.value))}
           className="mt-4 w-full accent-[var(--pen)]"
-          aria-label="Chọn bước"
+          aria-label={L.pick}
         />
       </div>
 
@@ -96,32 +98,28 @@ export function Walkthrough({ data, techs }: { data: WalkData; techs: Record<str
         <div className="min-h-[9rem] rounded-2xl border border-rule bg-surface p-5" aria-live="polite" data-level={meta?.level}>
           {i === 0 && (
             <>
-              <p className="font-display text-xl font-bold">Đề bài</p>
-              <p className="mt-1 text-ink-2">
-                {data.puzzle.replace(/\./g, "").length} số cho sẵn. Bấm &ldquo;Bước tiếp&rdquo; hoặc dùng phím mũi tên để đi qua lời giải.
-              </p>
+              <p className="font-display text-xl font-bold">{L.puzzle}</p>
+              <p className="mt-1 text-ink-2">{L.givens(data.puzzle.replace(/\./g, "").length)}</p>
             </>
           )}
           {step && meta && (
             <>
               <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                <span className="font-semibold tabular-nums text-ink-3">
-                  Bước {i}/{n}
-                </span>
-                <Link href={`/ky-thuat/${step.tech}`} className="font-semibold no-underline hover:underline" style={{ color: "var(--lv)" }}>
+                <span className="font-semibold tabular-nums text-ink-3">{L.stepOf(i, n)}</span>
+                <Link href={techHref(lang, step.tech)} className="font-semibold no-underline hover:underline" style={{ color: "var(--lv)" }}>
                   {meta.name}
                 </Link>
               </p>
               <p className="mt-2 text-[17px] leading-relaxed">
-                <RichText text={step.text} />
+                <RichText text={step.text[lang]} />
               </p>
-              {needCands && !always && <p className="mt-2 text-sm text-ink-3">Bước này loại ứng viên nên bàn cờ tự hiện ghi chú bút chì.</p>}
+              {needCands && !always && <p className="mt-2 text-sm text-ink-3">{L.autoCands}</p>}
             </>
           )}
           {i > n && (
             <>
-              <p className="font-display text-xl font-bold">Hoàn thành</p>
-              <p className="mt-1 text-ink-2">Mọi ô đã được điền bằng suy luận, không cần đoán một lần nào.</p>
+              <p className="font-display text-xl font-bold">{L.done}</p>
+              <p className="mt-1 text-ink-2">{L.doneText}</p>
             </>
           )}
         </div>
@@ -129,7 +127,7 @@ export function Walkthrough({ data, techs }: { data: WalkData; techs: Record<str
         <ol
           ref={listRef}
           className="mt-6 max-h-[60vh] overflow-y-auto rounded-2xl border border-rule bg-surface p-2"
-          aria-label="Danh sách các bước"
+          aria-label={L.list}
           onKeyDown={(e) => {
             if (e.key === "ArrowDown" || e.key === "ArrowRight") {
               e.preventDefault();
@@ -144,9 +142,7 @@ export function Walkthrough({ data, techs }: { data: WalkData; techs: Record<str
           {data.steps.map((st, k) => {
             const m = techs[st.tech];
             const on = k + 1 === i;
-            const target = st.places.length
-              ? `${cellName(st.places[0][0])} = ${st.places[0][1]}`
-              : `loại ${st.elims.length} ứng viên`;
+            const target = st.places.length ? L.placed(cellName(st.places[0][0], lang), st.places[0][1]) : L.removed(st.elims.length);
             return (
               <li key={k} data-step={k + 1} data-level={m.level}>
                 <button

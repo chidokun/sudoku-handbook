@@ -1,6 +1,8 @@
 "use client";
 
-export function PrintButton() {
+import { t, type Lang } from "@/lib/i18n";
+
+export function PrintButton({ lang }: { lang: Lang }) {
   return (
     <button
       type="button"
@@ -10,7 +12,7 @@ export function PrintButton() {
       <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
         <path d="M5 8V2.5h10V8M5 14.5H3.5v-6h13v6H15M5.5 12h9v5.5h-9z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
       </svg>
-      In bảng tóm tắt
+      {t(lang).print}
     </button>
   );
 }

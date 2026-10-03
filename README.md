@@ -1,48 +1,81 @@
-# Sổ tay Sudoku
+# Sudoku Handbook (Sổ tay Sudoku)
 
-Trang web hướng dẫn giải Sudoku bằng tiếng Việt, xếp các kỹ thuật theo độ sâu suy luận:
+A bilingual (English / Vietnamese) website that teaches how to solve Sudoku, with techniques ordered by depth of reasoning:
 
-- **Suy luận 1 bước** — nhìn là điền được: ô trống cuối cùng, số duy nhất trong khối/hàng/cột, ô chỉ còn một số.
-- **Suy luận 2 bước** — loại trước, điền sau: khoá ứng viên (chỉ hướng, chiếm khối), cặp lộ, cặp ẩn, bộ ba lộ, bộ ba ẩn.
-- **Suy luận N bước** — chuỗi lập luận: X-Wing, Swordfish, toà nhà chọc trời, cánh diều hai dây, XY-Wing, XYZ-Wing, W-Wing, tô màu đơn, hình chữ nhật duy nhất, BUG+1, chuỗi XY.
+- **1-step reasoning**: see it, fill it. Full house, hidden single (box/row/column), naked single.
+- **2-step reasoning**: eliminate first, then fill. Locked candidates (pointing, claiming), naked pair, hidden pair, naked triple, hidden triple.
+- **N-step reasoning**: chains of deductions. X-Wing, Swordfish, Skyscraper, 2-String Kite, XY-Wing, XYZ-Wing, W-Wing, Simple Coloring, Unique Rectangle, BUG+1, XY-Chain.
 
-Mỗi kỹ thuật có một ví dụ lấy từ đề thật, đi qua từng bước: số gây chặn được khoanh tròn, tia chặn có mũi tên, ô bị chặn đánh dấu ×, đường chấm nối ô bị loại với các ô mẫu hình mà nó nhìn thấy, liên kết mạnh/yếu, dải số 1–9 cho các kỹ thuật đếm số. Cuối mỗi trang kỹ thuật có mục nguồn tham khảo (HoDoKu, SudokuWiki; danh sách trong `content/sources.ts`). Ngoài ra có trang cơ bản, giải mẫu trọn vẹn một đề, bảng tóm tắt in được, thuật ngữ, tìm kiếm không dấu (phím `/` hoặc `Ctrl/⌘ K`), nền tối, và đánh dấu tiến độ học (lưu trong trình duyệt, không có máy chủ hay CSDL).
+Each technique has an example taken from a real puzzle that you step through one deduction at a time:
+- the digits doing the blocking are circled, and blocking rays have arrows;
+- blocked cells are marked with ×;
+- dotted lines connect each eliminated candidate to the pattern cells it sees;
+- strong and weak links are drawn between candidates;
+- counting techniques show a 1–9 digit strip.
 
-## Chạy
+Every technique page ends with references to HoDoKu and SudokuWiki (the list is in `content/sources.ts`).
+
+The site also has:
+- a basics page;
+- a full walkthrough of one puzzle;
+- a printable cheat sheet;
+- a glossary;
+- accent-insensitive search (`/` or `Ctrl/⌘ K`);
+- dark mode;
+- learning-progress tracking, stored in the browser (no server or database).
+
+## Languages
+
+- **English** is the default and lives at the root: `/`, `/basics/`, `/techniques/x-wing/`, `/levels/2-step/`…
+- **Vietnamese** lives under `/vi` with the same English slugs: `/vi/`, `/vi/basics/`, `/vi/techniques/x-wing/`, `/vi/levels/2-step/`…
+
+Routes always use English slugs whatever the display language, so switching language just adds or removes the `/vi` prefix. Each language has its own root layout (`app/(en)` and `app/(vi)`), so every page gets the right `<html lang>` and `hreflang` links to its counterpart. Pages are shared components in `components/pages/` that take a `lang` prop.
+
+**Automatic language choice.** The site is static (GitHub Pages, no server), so detection runs in a small inline script in `<head>` before the first paint (`detectScript` in `lib/i18n.ts`):
+
+1. If the visitor has picked a language with the EN/VI switch, that choice is remembered in `localStorage` and always wins.
+2. Otherwise the page is Vietnamese if any browser language starts with `vi`, or if the time zone is `Asia/Ho_Chi_Minh` / `Asia/Saigon` (used as a stand-in for location, since IP geolocation would need a server or a third-party service). Everyone else gets English.
+3. If that language differs from the page's, the script jumps to the same page in the other language, keeping the query string and hash. Search-engine crawlers are never redirected.
+
+Content lives in `content/` (Vietnamese originals, plus `techniques.en.ts` and English sections in `levels.ts` / `glossary.ts`); UI strings are in `lib/i18n.ts`. The step-by-step example narration is generated in both languages by `scripts/build-examples.ts`.
+
+## Running locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Deploy lên GitHub Pages
+## Deploying to GitHub Pages
 
-Site được xuất tĩnh (`output: "export"`) ra thư mục `out/`. Workflow [.github/workflows/deploy.yml](.github/workflows/deploy.yml) tự build và deploy mỗi khi push lên `main` (hoặc chạy tay ở tab Actions).
+The site is statically exported (`output: "export"`) to `out/`. The workflow [.github/workflows/deploy.yml](.github/workflows/deploy.yml) builds and deploys on every push to `main`. You can also run it manually from the Actions tab.
 
-Thiết lập một lần: vào **Settings → Pages → Build and deployment → Source**, chọn **GitHub Actions**.
+One-time setup: go to **Settings → Pages → Build and deployment → Source** and select **GitHub Actions**.
 
-Site chạy ở gốc tên miền riêng `sudoku.nguyentuan.dev` (cấu hình trong Settings → Pages → Custom domain), nên workflow build với `PAGES_BASE_PATH` rỗng. Nếu bỏ tên miền riêng và quay lại `chidokun.github.io/sudoku-handbook`, đổi `PAGES_BASE_PATH` trong workflow thành `/sudoku-handbook`.
+The site is served from the root of the custom domain `sudoku.nguyentuan.dev`, configured in Settings → Pages → Custom domain. Because of that, the workflow builds with an empty `PAGES_BASE_PATH`. If you drop the custom domain and go back to `chidokun.github.io/sudoku-handbook`, set `PAGES_BASE_PATH` in the workflow to `/sudoku-handbook`.
 
-Xem thử bản build ở máy: `npm run build` rồi `npm start`.
+To preview the production build locally, run `npm run build` and then `npm start`.
 
-## Dữ liệu ví dụ
+## Example data
 
-Ví dụ không viết tay mà được sinh bởi bộ giải trong `lib/sudoku/`:
+The examples are not hand-written. They are generated by the solver in `lib/sudoku/`:
 
-1. `scripts/build-examples.ts` tạo 40.000 đề ngẫu nhiên có lời giải duy nhất, giải từng đề theo thứ tự kỹ thuật từ dễ đến khó, và chọn thế cờ minh hoạ rõ nhất cho mỗi kỹ thuật (ưu tiên thế cờ mà phép loại mở ra ngay một bước điền số).
-2. Mọi phép điền và phép loại trong ví dụ được đối chiếu với lời giải duy nhất trước khi ghi ra `data/examples.json` và `data/walkthrough.json`.
+1. `scripts/build-examples.ts` generates 40,000 random puzzles with unique solutions. It solves each one, always applying the easiest technique that still works. For each technique it then picks the clearest board position to illustrate it, preferring positions where the elimination immediately unlocks a placement.
+2. Every placement and elimination in the examples is checked against the puzzle's unique solution before being written to `data/examples.json` and `data/walkthrough.json`.
 
 ```bash
-npm run examples       # sinh lại data/*.json (~2 phút)
-npm run check:solver   # kiểm tra mọi kỹ thuật trên 5.000 đề ngẫu nhiên
+npm run examples       # regenerate data/*.json (~2 minutes)
+npm run check:solver   # verify every technique on 5,000 random puzzles
 ```
 
-Script chạy trực tiếp bằng Node ≥ 23 (hỗ trợ TypeScript sẵn), không cần công cụ build.
+The scripts run directly on Node ≥ 23 (built-in TypeScript support), with no build step.
 
-## Cấu trúc
+## Project structure
 
-- `app/` — các trang (Next.js App Router, toàn bộ sinh tĩnh)
-- `components/Board.tsx` — bàn cờ SVG dùng cho mọi hình minh hoạ
-- `content/` — nội dung tiếng Việt: kỹ thuật, tầng suy luận, thuật ngữ
-- `lib/sudoku/` — lõi Sudoku, bộ tìm kỹ thuật, bộ sinh đề
-- `scripts/` — sinh và kiểm chứng ví dụ
+- `components/Board.tsx`: the SVG board used for every illustration
+- `app/(en)`, `app/(vi)/vi`: routes for each language (thin wrappers)
+- `components/pages/`: the pages, shared by both languages
+- `content/`: content in both languages (techniques, reasoning levels, glossary, references)
+- `lib/i18n.ts`: routes, language switching and detection, UI strings
+- `lib/sudoku/`: Sudoku core, technique finders, puzzle generator
+- `scripts/`: example generation and verification

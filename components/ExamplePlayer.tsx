@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { t, type Dict, type Lang } from "@/lib/i18n";
 import type { Example, Tally } from "@/lib/sudoku/types";
 import { Board } from "./Board";
 import { RichText } from "./RichText";
 
-export function ExamplePlayer({ example, compact = false }: { example: Example; compact?: boolean }) {
+export function ExamplePlayer({ example, lang, compact = false }: { example: Example; lang: Lang; compact?: boolean }) {
+  const L = t(lang);
+  const frames = example.frames[lang];
   const [i, setI] = useState(0);
   const [showCands, setShowCands] = useState(example.showCands);
-  const n = example.frames.length;
-  const f = example.frames[i];
+  const n = frames.length;
+  const f = frames[i];
   const go = (k: number) => setI(Math.max(0, Math.min(n - 1, k)));
   const last = i === n - 1;
 
@@ -28,13 +31,13 @@ export function ExamplePlayer({ example, compact = false }: { example: Example; 
           cands={example.cands}
           frame={f}
           showCands={showCands}
-          label={`Ví dụ minh hoạ, bước ${i + 1}: ${f.title}`}
+          label={L.player.exampleLabel(i + 1, f.title)}
         />
       </div>
 
       <figcaption className="mt-4">
-        <ol className="flex flex-wrap gap-1.5" aria-label="Các bước suy luận">
-          {example.frames.map((fr, k) => (
+        <ol className="flex flex-wrap gap-1.5" aria-label={L.player.steps}>
+          {frames.map((fr, k) => (
             <li key={k}>
               <button
                 type="button"
@@ -60,7 +63,7 @@ export function ExamplePlayer({ example, compact = false }: { example: Example; 
           <p className="mt-1 text-[16px] leading-relaxed text-ink-2">
             <RichText text={f.text} />
           </p>
-          {f.tally && <TallyStrip tally={f.tally} />}
+          {f.tally && <TallyStrip tally={f.tally} L={L} />}
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -71,14 +74,14 @@ export function ExamplePlayer({ example, compact = false }: { example: Example; 
             className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-rule px-3 text-sm font-medium disabled:opacity-40"
           >
             <Chevron dir="left" />
-            Bước trước
+            {L.player.prev}
           </button>
           <button
             type="button"
             onClick={() => (last ? setI(0) : go(i + 1))}
             className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-pen px-4 text-sm font-semibold text-on-pen"
           >
-            {last ? "Xem lại từ đầu" : "Bước tiếp"}
+            {last ? L.player.restart : L.player.next}
             {!last && <Chevron dir="right" />}
           </button>
           <label className="ml-auto inline-flex cursor-pointer items-center gap-2 text-sm text-ink-2">
@@ -88,13 +91,13 @@ export function ExamplePlayer({ example, compact = false }: { example: Example; 
               checked={showCands}
               onChange={(e) => setShowCands(e.target.checked)}
             />
-            Hiện ứng viên
+            {L.player.showCands}
           </label>
         </div>
 
         {example.carried && showCands && (
           <p className="mt-3 border-l-2 border-rule pl-3 text-sm text-ink-3">
-            Ứng viên trên bàn đã được rút gọn bởi các bước loại trừ trước đó trong lời giải của đề này.
+            {L.player.carried}
           </p>
         )}
       </figcaption>
@@ -118,7 +121,7 @@ export function Chevron({ dir }: { dir: "left" | "right" }) {
 }
 
 /** Dải số 1–9: gạch các số đã thấy, tô vàng số còn thiếu. */
-function TallyStrip({ tally }: { tally: Tally }) {
+function TallyStrip({ tally, L }: { tally: Tally; L: Dict }) {
   return (
     <div className="mt-3">
       <p className="text-sm text-ink-3">{tally.label}</p>
@@ -136,7 +139,7 @@ function TallyStrip({ tally }: { tally: Tally }) {
                     ? "border-rule bg-sunken text-ink-3 line-through decoration-2"
                     : "border-rule text-ink-2"
               }`}
-              aria-label={missing ? `${d}: còn thiếu` : seen ? `${d}: đã có` : String(d)}
+              aria-label={missing ? L.player.tallyMissing(d) : seen ? L.player.tallySeen(d) : String(d)}
             >
               {d}
             </li>

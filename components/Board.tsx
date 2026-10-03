@@ -132,7 +132,7 @@ export function Board({ grid, givens, cands, frame, showCands = false, labels = 
       viewBox={`${-pad} ${-pad} ${N + pad + 3} ${N + pad + 3}`}
       className={`board ${className ?? ""}`}
       role="img"
-      aria-label={label ?? "Bàn cờ Sudoku minh hoạ"}
+      aria-label={label ?? "Sudoku"}
     >
       <rect x={0} y={0} width={N} height={N} className="bd-bg" />
 

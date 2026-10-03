@@ -1,8 +1,10 @@
 "use client";
 
+import { t, type Lang } from "@/lib/i18n";
 import { useLearned } from "@/lib/progress";
 
-export function LearnedToggle({ slug }: { slug: string }) {
+export function LearnedToggle({ slug, lang }: { slug: string; lang: Lang }) {
+  const L = t(lang).progress;
   const { learned, toggle } = useLearned();
   const done = learned.includes(slug);
   return (
@@ -16,23 +18,23 @@ export function LearnedToggle({ slug }: { slug: string }) {
       style={done ? { background: "var(--lv)" } : undefined}
     >
       <Check filled={done} />
-      {done ? "Đã hiểu kỹ thuật này" : "Đánh dấu đã hiểu"}
+      {done ? L.done : L.mark}
     </button>
   );
 }
 
-export function LearnedMark({ slug }: { slug: string }) {
+export function LearnedMark({ slug, lang }: { slug: string; lang: Lang }) {
   const { learned } = useLearned();
   if (!learned.includes(slug)) return null;
   return (
-    <span className="shrink-0" style={{ color: "var(--lv)" }} title="Đã hiểu">
+    <span className="shrink-0" style={{ color: "var(--lv)" }} title={t(lang).progress.done}>
       <Check filled small />
-      <span className="sr-only">Đã hiểu</span>
+      <span className="sr-only">{t(lang).progress.done}</span>
     </span>
   );
 }
 
-export function LevelProgress({ slugs }: { slugs: string[] }) {
+export function LevelProgress({ slugs, lang }: { slugs: string[]; lang: Lang }) {
   const { learned } = useLearned();
   const done = slugs.filter((s) => learned.includes(s)).length;
   return (
@@ -40,9 +42,7 @@ export function LevelProgress({ slugs }: { slugs: string[] }) {
       <div className="h-1.5 w-24 overflow-hidden rounded-full bg-sunken" aria-hidden="true">
         <div className="h-full rounded-full transition-[width]" style={{ width: `${(done / slugs.length) * 100}%`, background: "var(--lv)" }} />
       </div>
-      <span className="tabular-nums">
-        Đã hiểu {done}/{slugs.length}
-      </span>
+      <span className="tabular-nums">{t(lang).progress.count(done, slugs.length)}</span>
     </div>
   );
 }

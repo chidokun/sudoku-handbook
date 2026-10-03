@@ -1,4 +1,4 @@
-import type { Level } from "@/lib/sudoku/types";
+import type { Lang, Level } from "@/lib/sudoku/types";
 
 export interface LevelInfo {
   level: Level;
@@ -11,10 +11,10 @@ export interface LevelInfo {
   mindset: { q: string; a: string }[];
 }
 
-export const LEVELS: LevelInfo[] = [
+const LEVELS_VI: LevelInfo[] = [
   {
     level: 1,
-    slug: "1-buoc",
+    slug: "1-step",
     title: "Suy luận 1 bước",
     short: "1 bước",
     tagline: "Nhìn là điền được",
@@ -30,7 +30,7 @@ export const LEVELS: LevelInfo[] = [
   },
   {
     level: 2,
-    slug: "2-buoc",
+    slug: "2-step",
     title: "Suy luận 2 bước",
     short: "2 bước",
     tagline: "Loại trước, điền sau",
@@ -46,7 +46,7 @@ export const LEVELS: LevelInfo[] = [
   },
   {
     level: 3,
-    slug: "n-buoc",
+    slug: "n-step",
     title: "Suy luận N bước",
     short: "N bước",
     tagline: "Chuỗi lập luận nối tiếp",
@@ -63,5 +63,58 @@ export const LEVELS: LevelInfo[] = [
   },
 ];
 
-export const LEVEL_BY_SLUG = Object.fromEntries(LEVELS.map((l) => [l.slug, l])) as Record<string, LevelInfo>;
-export const levelInfo = (level: Level) => LEVELS[level - 1];
+const LEVELS_EN: LevelInfo[] = [
+  {
+    level: 1,
+    slug: "1-step",
+    title: "1-step reasoning",
+    short: "1 step",
+    tagline: "See it, fill it",
+    intro: [
+      "At this level every conclusion takes a single observation: you look at the digits already placed and see that a cell can take only one digit, or that a digit has only one place left. No notes, no assumptions.",
+      "There are two questions to ask the board. From the cell: \"which digits can go here?\". From the digit: \"where can this digit go in the unit?\". Most easy and medium puzzles are solved with just the four techniques below.",
+    ],
+    when: "Always the first thing to look for, and the thing to return to after every elimination at the higher levels.",
+    mindset: [
+      { q: "Where does this digit go?", a: "Pick a digit, cast rays from its copies, and find the only empty spot in a box, row or column." },
+      { q: "Which digit is this cell?", a: "Pick a cell and collect the digits in its row, column and box. If exactly one is missing, you are done." },
+    ],
+  },
+  {
+    level: 2,
+    slug: "2-step",
+    title: "2-step reasoning",
+    short: "2 steps",
+    tagline: "Eliminate first, then fill",
+    intro: [
+      "When no cell can be filled directly, you need an intermediate step: prove that a digit cannot be in certain cells. Step one is finding a locked structure — a digit trapped in the intersection of a box and a line, or a group of digits that takes over a group of cells. Step two is using that elimination to open up a new placement.",
+      "From this level on, write in the candidates (pencil marks) for every empty cell. These patterns only show up when you can see every possibility of every cell.",
+    ],
+    when: "When you have exhausted hidden and naked singles and the board still won't move.",
+    mindset: [
+      { q: "Where is this digit trapped?", a: "If a digit in a box lies on only one line (or the reverse), it claims that line: locked candidates." },
+      { q: "Which cells are already taken?", a: "N cells holding only N digits (naked set), or N digits living in only N cells (hidden set): those digits cannot appear anywhere else." },
+    ],
+  },
+  {
+    level: 3,
+    slug: "n-step",
+    title: "N-step reasoning",
+    short: "N steps",
+    tagline: "Chains of deductions",
+    intro: [
+      "Hard puzzles need longer arguments: \"if cell A is x then cell B cannot be y, so cell C must be y, so…\". The techniques at this level are such chains packaged into recognisable patterns: fish (X-Wing, Swordfish), wings (XY-Wing, W-Wing), chains and colouring, plus tricks based on the uniqueness of the solution.",
+      "All of them are built from two kinds of link. A strong link: in a unit, digit d has exactly two places — if one is not d, the other certainly is. A weak link: two candidates cannot both be true — if one is true, the other is false. A valid chain always alternates \"if not… then…\" (strong) and \"if… then not…\" (weak).",
+      "When every pattern has run out, players use forcing chains: try each option of a cell in turn and follow the consequences; if every branch leads to the same conclusion, that conclusion is true. It is still logic, not guessing.",
+    ],
+    when: "When the 2-step techniques can no longer eliminate anything — usually only in hard and very hard puzzles.",
+    mindset: [
+      { q: "Where are the strong links?", a: "List the units with only two places for a digit, and the cells with only two candidates. They are the raw material of every chain." },
+      { q: "If this end is false, what about the other?", a: "Walk the chain from one assumption. If the two ends force one of them to be true, a cell that sees both ends is eliminated." },
+    ],
+  },
+];
+
+export const getLevels = (lang: Lang) => (lang === "vi" ? LEVELS_VI : LEVELS_EN);
+export const levelInfo = (lang: Lang, level: Level) => getLevels(lang)[level - 1];
+export const levelBySlug = (lang: Lang, slug: string) => getLevels(lang).find((l) => l.slug === slug);

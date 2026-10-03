@@ -1,20 +1,26 @@
-import type { Level } from "@/lib/sudoku/types";
+import type { Lang, Level } from "@/lib/sudoku/types";
+import { TECH_EN } from "./techniques.en";
 
-export interface Technique {
-  slug: string;
-  level: Level;
+/** Phần chữ của một kỹ thuật, dịch theo ngôn ngữ. */
+export interface TechniqueText {
   name: string;
   alias: string;
-  difficulty: 1 | 2 | 3 | 4 | 5;
   summary: string;
   rule: string;
   idea: string[];
   spot: string[];
   pitfalls: string[];
+}
+
+export interface Technique extends TechniqueText {
+  slug: string;
+  level: Level;
+  difficulty: 1 | 2 | 3 | 4 | 5;
   related: string[];
 }
 
-export const TECHNIQUES: Technique[] = [
+/** Bản tiếng Việt (gốc). Bản tiếng Anh nằm trong techniques.en.ts. */
+const TECHNIQUES_VI: Technique[] = [
   // ============ Suy luận 1 bước ============
   {
     slug: "full-house",
@@ -433,11 +439,18 @@ export const TECHNIQUES: Technique[] = [
   },
 ];
 
-export const TECH_BY_SLUG = Object.fromEntries(TECHNIQUES.map((t) => [t.slug, t])) as Record<string, Technique>;
+const TECHNIQUES_EN: Technique[] = TECHNIQUES_VI.map((t) => ({ ...t, ...TECH_EN[t.slug] }));
 
-export const techniquesOfLevel = (level: Level) => TECHNIQUES.filter((t) => t.level === level);
+export const getTechniques = (lang: Lang) => (lang === "vi" ? TECHNIQUES_VI : TECHNIQUES_EN);
 
-export function neighbors(slug: string) {
-  const i = TECHNIQUES.findIndex((t) => t.slug === slug);
-  return { prev: TECHNIQUES[i - 1], next: TECHNIQUES[i + 1] };
+export const TECH_SLUGS = TECHNIQUES_VI.map((t) => t.slug);
+
+export const getTechnique = (lang: Lang, slug: string) => getTechniques(lang).find((t) => t.slug === slug);
+
+export const techniquesOfLevel = (lang: Lang, level: Level) => getTechniques(lang).filter((t) => t.level === level);
+
+export function neighbors(lang: Lang, slug: string) {
+  const list = getTechniques(lang);
+  const i = list.findIndex((t) => t.slug === slug);
+  return { prev: list[i - 1], next: list[i + 1] };
 }

@@ -1,6 +1,9 @@
-export function Difficulty({ value }: { value: number }) {
+import { t, type Lang } from "@/lib/i18n";
+
+export function Difficulty({ value, lang }: { value: number; lang: Lang }) {
+  const label = t(lang).difficulty(value);
   return (
-    <span className="inline-flex items-center gap-1" aria-label={`Độ khó ${value} trên 5`} title={`Độ khó ${value}/5`}>
+    <span className="inline-flex items-center gap-1" aria-label={label} title={label}>
       {Array.from({ length: 5 }, (_, i) => (
         <span
           key={i}

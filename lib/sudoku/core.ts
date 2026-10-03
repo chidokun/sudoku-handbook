@@ -96,19 +96,29 @@ export function basicCandidates(grid: number[]): number[] {
   return cands;
 }
 
-// ---------- Cách gọi tên bằng tiếng Việt ----------
+// ---------- Cách gọi tên theo ngôn ngữ ----------
 
-/** Tên ô: H3C5 = hàng 3, cột 5. */
-export const cellName = (c: number) => `H${rowOf(c) + 1}C${colOf(c) + 1}`;
+export type Lang = "en" | "vi";
 
-export function unitName(u: Unit | number): string {
+/** Tên ô: H3C5 (hàng 3, cột 5) trong tiếng Việt, r3c5 trong tiếng Anh. */
+export const cellName = (c: number, lang: Lang = "vi") =>
+  lang === "vi" ? `H${rowOf(c) + 1}C${colOf(c) + 1}` : `r${rowOf(c) + 1}c${colOf(c) + 1}`;
+
+const UNIT_LABEL: Record<Lang, Record<UnitType, string>> = {
+  vi: { row: "hàng", col: "cột", box: "khối" },
+  en: { row: "row", col: "column", box: "box" },
+};
+
+export function unitName(u: Unit | number, lang: Lang = "vi"): string {
   const unit = typeof u === "number" ? UNITS[u] : u;
-  const label = unit.type === "row" ? "hàng" : unit.type === "col" ? "cột" : "khối";
-  return `${label} ${unit.index + 1}`;
+  return `${UNIT_LABEL[lang][unit.type]} ${unit.index + 1}`;
 }
 
-export function joinVi(items: (string | number)[], last = "và"): string {
+/** Nối danh sách: "a, b và c" / "a, b and c". */
+export function joinList(items: (string | number)[], lang: Lang = "vi", last?: string): string {
   const xs = items.map(String);
   if (xs.length <= 1) return xs.join("");
-  return `${xs.slice(0, -1).join(", ")} ${last} ${xs[xs.length - 1]}`;
+  return `${xs.slice(0, -1).join(", ")} ${last ?? (lang === "vi" ? "và" : "and")} ${xs[xs.length - 1]}`;
 }
+
+export const joinVi = (items: (string | number)[], last = "và") => joinList(items, "vi", last);

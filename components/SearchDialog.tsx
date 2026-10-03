@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { t, type Lang } from "@/lib/i18n";
 
 export interface SearchItem {
   href: string;
@@ -20,7 +21,8 @@ const norm = (s: string) =>
     .replace(/[̀-ͯ]/g, "")
     .replace(/đ/g, "d");
 
-export function SearchDialog({ items }: { items: SearchItem[] }) {
+export function SearchDialog({ items, lang }: { items: SearchItem[]; lang: Lang }) {
+  const L = t(lang).search;
   const ref = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState("");
@@ -30,13 +32,13 @@ export function SearchDialog({ items }: { items: SearchItem[] }) {
   const index = useMemo(() => items.map((it) => ({ it, text: norm(`${it.title} ${it.sub} ${it.keywords ?? ""}`) })), [items]);
   const results = useMemo(() => {
     const tokens = norm(q).split(/\s+/).filter(Boolean);
-    if (!tokens.length) return items.filter((it) => it.kind !== "Thuật ngữ").slice(0, 8);
+    if (!tokens.length) return items.filter((it) => it.kind !== L.kindTerm).slice(0, 8);
     return index
       .filter(({ text }) => tokens.every((t) => text.includes(t)))
       .sort((a, b) => Number(norm(b.it.title).startsWith(tokens[0])) - Number(norm(a.it.title).startsWith(tokens[0])))
       .map(({ it }) => it)
       .slice(0, 12);
-  }, [q, index, items]);
+  }, [q, index, items, L.kindTerm]);
 
   const open = () => {
     setQ("");
@@ -64,13 +66,13 @@ export function SearchDialog({ items }: { items: SearchItem[] }) {
         type="button"
         onClick={open}
         className="flex h-9 items-center gap-2 rounded-lg border border-rule bg-surface px-3 text-sm text-ink-3 hover:border-ink-3 hover:text-ink-2"
-        aria-label="Tìm kỹ thuật"
+        aria-label={L.button}
       >
         <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
           <circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
           <path d="m13 13 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
-        <span className="hidden sm:inline">Tìm kỹ thuật</span>
+        <span className="hidden sm:inline">{L.button}</span>
         <kbd className="hidden rounded border border-rule px-1.5 font-sans text-xs sm:inline">/</kbd>
       </button>
 
@@ -78,7 +80,7 @@ export function SearchDialog({ items }: { items: SearchItem[] }) {
         ref={ref}
         onClick={(e) => e.target === ref.current && close()}
         className="m-auto mt-[12vh] w-[min(92vw,560px)] rounded-2xl border border-rule bg-surface p-0 text-ink shadow-2xl backdrop:bg-[rgba(10,15,30,0.45)]"
-        aria-label="Tìm trong sổ tay"
+        aria-label={L.label}
       >
         <div className="flex items-center gap-3 border-b border-rule px-4">
           <svg viewBox="0 0 20 20" className="h-5 w-5 shrink-0 text-ink-3" aria-hidden="true">
@@ -104,15 +106,15 @@ export function SearchDialog({ items }: { items: SearchItem[] }) {
                 router.push(results[active].href);
               }
             }}
-            placeholder="Gõ tên kỹ thuật, ví dụ: cap lo, x-wing…"
+            placeholder={L.placeholder}
             className="h-14 w-full bg-transparent text-base outline-none placeholder:text-ink-3"
-            aria-label="Từ khoá"
+            aria-label={L.keyword}
           />
           <kbd className="rounded border border-rule px-1.5 text-xs text-ink-3">Esc</kbd>
         </div>
         <ul className="max-h-[55vh] overflow-y-auto p-2" role="listbox">
           {results.length === 0 && (
-            <li className="px-3 py-6 text-center text-sm text-ink-3">Không có kết quả cho “{q}”. Thử tên tiếng Anh, như “naked pair”.</li>
+            <li className="px-3 py-6 text-center text-sm text-ink-3">{L.empty(q)}</li>
           )}
           {results.map((it, k) => (
             <li key={it.href} role="option" aria-selected={k === active}>

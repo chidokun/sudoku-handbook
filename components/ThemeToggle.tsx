@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { t, type Lang } from "@/lib/i18n";
 
 type Theme = "light" | "dark";
 const EVENT = "sudoku-handbook:theme";
@@ -21,7 +22,8 @@ function subscribe(cb: () => void) {
   };
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ lang }: { lang: Lang }) {
+  const L = t(lang);
   const theme = useSyncExternalStore(subscribe, current, () => "light" as Theme);
   const next: Theme = theme === "dark" ? "light" : "dark";
   return (
@@ -35,8 +37,8 @@ export function ThemeToggle() {
         window.dispatchEvent(new Event(EVENT));
       }}
       className="grid h-9 w-9 place-items-center rounded-lg text-ink-2 hover:bg-sunken hover:text-ink"
-      aria-label={next === "dark" ? "Chuyển sang nền tối" : "Chuyển sang nền sáng"}
-      title={next === "dark" ? "Nền tối" : "Nền sáng"}
+      aria-label={next === "dark" ? L.themeToDark : L.themeToLight}
+      title={next === "dark" ? L.themeToDark : L.themeToLight}
     >
       <svg viewBox="0 0 20 20" className="h-[18px] w-[18px]" aria-hidden="true" suppressHydrationWarning>
         {theme === "dark" ? (

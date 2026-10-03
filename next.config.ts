@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   trailingSlash: true,
   basePath,
   images: { unoptimized: true },
+  // Có hai root layout (en ở gốc, vi ở /vi) nên trang 404 dùng app/global-not-found.tsx.
+  experimental: { globalNotFound: true },
 };
 
 export default nextConfig;

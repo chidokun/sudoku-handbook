@@ -16,7 +16,8 @@ import {
   digitsOf,
   gridToString,
   has,
-  joinVi,
+  joinList,
+  type Lang,
   popcount,
   rowOf,
   unitName,
@@ -61,13 +62,26 @@ const WANTED: TechId[] = [
 ];
 const LEVEL2: TechId[] = ["pointing", "claiming", "naked-pair", "hidden-pair", "naked-triple", "hidden-triple"];
 
-// ---------- tiện ích viết câu ----------
-const cn = cellName;
-const un = unitName;
+// ---------- tiện ích viết câu (song ngữ) ----------
+let LANG: Lang = "vi";
+const tr = (vi: string, en: string) => (LANG === "vi" ? vi : en);
+/** Chạy một hàm sinh văn bản cho cả hai ngôn ngữ. */
+function inBoth<T>(fn: () => T): Record<Lang, T> {
+  const out = {} as Record<Lang, T>;
+  for (const l of ["vi", "en"] as Lang[]) {
+    LANG = l;
+    out[l] = fn();
+  }
+  LANG = "vi";
+  return out;
+}
+const cn = (c: number) => cellName(c, LANG);
+const un = (u: Parameters<typeof unitName>[0]) => unitName(u, LANG);
+const join = (xs: (string | number)[]) => joinList(xs, LANG);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const b = (x: string | number) => `**${x}**`;
-const cells = (cs: number[]) => joinVi(cs.map(cn));
-const nums = (ds: number[]) => joinVi(ds.map(b));
+const cells = (cs: number[]) => join(cs.map(cn));
+const nums = (ds: number[]) => join(ds.map(b));
 const key = (c: number, d: number) => `${c}:${d}`;
 
 interface Candidate {
@@ -289,7 +303,7 @@ const elimCells = (st: Step) => [...new Set(st.elims.map(([c]) => c))];
 const elimsText = (st: Step) => {
   const byDigit = new Map<number, number[]>();
   for (const [c, d] of st.elims) byDigit.set(d, [...(byDigit.get(d) ?? []), c]);
-  // Gộp các số bị loại khỏi cùng một nhóm ô: "2 và 4 khỏi H3C6".
+  // Gộp các số bị loại khỏi cùng một nhóm ô: "2 và 4 khỏi H3C6" / "2 and 4 from r3c6".
   const byCells = new Map<string, { ds: number[]; cs: number[] }>();
   for (const [d, cs] of byDigit) {
     const k = cs.join(",");
@@ -297,7 +311,7 @@ const elimsText = (st: Step) => {
     g.ds.push(d);
     byCells.set(k, g);
   }
-  return joinVi([...byCells.values()].map((g) => `${nums(g.ds)} khỏi ${cells(g.cs)}`), "và");
+  return join([...byCells.values()].map((g) => `${nums(g.ds)} ${tr("khỏi", "from")} ${cells(g.cs)}`));
 };
 
 function followFrame(prev: Frame, follow: Step | null): Frame[] {
@@ -306,17 +320,26 @@ function followFrame(prev: Frame, follow: Step | null): Frame[] {
   let text: string;
   let units: number[] = [];
   if (follow.tech === "naked-single") {
-    text = `Sau khi loại, ô ${cn(c)} chỉ còn đúng một ứng viên là ${b(d)} → điền ${b(d)}. Phép loại vừa rồi đã mở ra một bước điền số mới.`;
+    text = tr(
+      `Sau khi loại, ô ${cn(c)} chỉ còn đúng một ứng viên là ${b(d)} → điền ${b(d)}. Phép loại vừa rồi đã mở ra một bước điền số mới.`,
+      `After the elimination, ${cn(c)} has only one candidate left, ${b(d)} → place ${b(d)}. The elimination has opened up a new placement.`,
+    );
   } else if (follow.tech === "full-house") {
-    text = `Sau khi loại, ${un(follow.info.unit)} chỉ còn một ô trống ${cn(c)} → điền ${b(d)}.`;
+    text = tr(
+      `Sau khi loại, ${un(follow.info.unit)} chỉ còn một ô trống ${cn(c)} → điền ${b(d)}.`,
+      `After the elimination, ${un(follow.info.unit)} has a single empty cell, ${cn(c)} → place ${b(d)}.`,
+    );
     units = [follow.info.unit];
   } else {
-    text = `Sau khi loại, trong ${un(follow.info.unit)} số ${b(d)} chỉ còn một chỗ duy nhất là ${cn(c)} → điền ${b(d)}.`;
+    text = tr(
+      `Sau khi loại, trong ${un(follow.info.unit)} số ${b(d)} chỉ còn một chỗ duy nhất là ${cn(c)} → điền ${b(d)}.`,
+      `After the elimination, ${b(d)} has only one place left in ${un(follow.info.unit)}: ${cn(c)} → place ${b(d)}.`,
+    );
     units = [follow.info.unit];
   }
   return [
     {
-      title: "Điền số",
+      title: tr("Điền số", "Place the digit"),
       text,
       cells: [[c, "focus"]],
       cands: [[c, d, "pattern"]],
@@ -326,6 +349,9 @@ function followFrame(prev: Frame, follow: Step | null): Frame[] {
     },
   ];
 }
+
+const ELIM_TITLE = () => tr("Loại ứng viên", "Eliminate candidates");
+const PLACE_TITLE = () => tr("Điền số", "Place the digit");
 
 function framesFor(cand: Candidate): Frame[] {
   const s = cand.state;
@@ -342,18 +368,24 @@ function framesFor(cand: Candidate): Frame[] {
       const others = u.cells.filter((c) => c !== i.cell);
       return [
         {
-          title: "Tìm đơn vị gần đầy",
-          text: `${cap(un(u))} đã có 8 số, chỉ còn trống đúng một ô là ${cn(i.cell)}.`,
+          title: tr("Tìm đơn vị gần đầy", "Find an almost-full unit"),
+          text: tr(
+            `${cap(un(u))} đã có 8 số, chỉ còn trống đúng một ô là ${cn(i.cell)}.`,
+            `${cap(un(u))} already has 8 digits; only one cell is empty: ${cn(i.cell)}.`,
+          ),
           units: [u.id],
           cells: [...tint(others, "unit"), [i.cell, "focus"]],
         },
         {
-          title: "Điền số còn thiếu",
-          text: `Đánh dấu các số đã có trong ${un(u)}: ${present.join(", ")}. Số duy nhất còn thiếu là ${b(i.digit)}, vậy ${cn(i.cell)} = ${b(i.digit)}.`,
+          title: tr("Điền số còn thiếu", "Place the missing digit"),
+          text: tr(
+            `Đánh dấu các số đã có trong ${un(u)}: ${present.join(", ")}. Số duy nhất còn thiếu là ${b(i.digit)}, vậy ${cn(i.cell)} = ${b(i.digit)}.`,
+            `Cross off the digits already in ${un(u)}: ${present.join(", ")}. The only missing digit is ${b(i.digit)}, so ${cn(i.cell)} = ${b(i.digit)}.`,
+          ),
           units: [u.id],
           cells: [...tint(others, "pattern"), [i.cell, "focus"]],
           places: [[i.cell, i.digit]],
-          tally: { label: `Các số trong ${un(u)}`, seen: present, missing: [i.digit] },
+          tally: { label: tr(`Các số trong ${un(u)}`, `Digits in ${un(u)}`), seen: present, missing: [i.digit] },
         },
       ];
     }
@@ -364,25 +396,41 @@ function framesFor(cand: Candidate): Frame[] {
       const allD = s.grid.map((v, c) => (v === d ? c : -1)).filter((c) => c >= 0);
       const rays = hatchRays(box.id, lines);
       const srcs = lines.map((l) => l.src);
-      const srcText = joinVi(lines.map((l) => `${cn(l.src)} (chặn ${l.kind === "row" ? "hàng" : "cột"} ${l.idx + 1})`));
+      const srcText = join(
+        lines.map((l) =>
+          tr(
+            `${cn(l.src)} (chặn ${l.kind === "row" ? "hàng" : "cột"} ${l.idx + 1})`,
+            `${cn(l.src)} (blocking ${l.kind === "row" ? "row" : "column"} ${l.idx + 1})`,
+          ),
+        ),
+      );
       return [
         {
-          title: "Chọn một khối và một số",
-          text: `Xét số ${b(d)} trong ${un(box)}. Khối này chưa có số ${d} và còn ${empties.length + 1} ô trống. Các số ${d} đã có trên bàn được tô xanh.`,
+          title: tr("Chọn một khối và một số", "Pick a box and a digit"),
+          text: tr(
+            `Xét số ${b(d)} trong ${un(box)}. Khối này chưa có số ${d} và còn ${empties.length + 1} ô trống. Các số ${d} đã có trên bàn được tô xanh.`,
+            `Look at digit ${b(d)} in ${un(box)}. The box has no ${d} yet and ${empties.length + 1} empty cells. Every ${d} already on the board is shaded green.`,
+          ),
           units: [box.id],
           cells: [...tint(allD, "pattern"), ...tint([...empties, i.cell], "unit")],
         },
         {
-          title: "Quét tia",
-          text: `Mỗi số ${d} chiếu một tia dọc theo hàng và cột của nó: ô trống nằm trên tia không thể là ${d} nữa. Các số ${d} được khoanh tròn ở ${srcText} chặn ${empties.length} ô trống của ${un(box)} (đánh dấu ×), chỉ chừa lại một ô.`,
+          title: tr("Quét tia", "Cast the rays"),
+          text: tr(
+            `Mỗi số ${d} chiếu một tia dọc theo hàng và cột của nó: ô trống nằm trên tia không thể là ${d} nữa. Các số ${d} được khoanh tròn ở ${srcText} chặn ${empties.length} ô trống của ${un(box)} (đánh dấu ×), chỉ chừa lại một ô.`,
+            `Each ${d} casts a ray along its row and column: an empty cell on a ray can no longer be ${d}. The circled ${d}s at ${srcText} block ${empties.length} empty cells of ${un(box)} (marked ×), leaving just one.`,
+          ),
           units: [box.id],
           cells: [...tint(srcs, "pattern"), ...tint(empties, "blocked"), [i.cell, "focus"]],
           rings: srcs,
           lines: rays,
         },
         {
-          title: "Điền số",
-          text: `Ô duy nhất không bị tia nào chạm tới là ${cn(i.cell)}, nên số ${d} của ${un(box)} phải nằm ở đó → ${cn(i.cell)} = ${b(d)}.`,
+          title: PLACE_TITLE(),
+          text: tr(
+            `Ô duy nhất không bị tia nào chạm tới là ${cn(i.cell)}, nên số ${d} của ${un(box)} phải nằm ở đó → ${cn(i.cell)} = ${b(d)}.`,
+            `The only cell no ray reaches is ${cn(i.cell)}, so the ${d} of ${un(box)} must go there → ${cn(i.cell)} = ${b(d)}.`,
+          ),
           units: [box.id],
           cells: [...tint(srcs, "pattern"), ...tint(empties, "blocked"), [i.cell, "focus"]],
           rings: srcs,
@@ -395,36 +443,52 @@ function framesFor(cand: Candidate): Frame[] {
       const line = UNITS[i.unit];
       const d = i.digit as number;
       const reasons = (cand.extra as { reasons: { cell: number; via: "cross" | "box"; src: number }[] }).reasons;
-      const crossName = line.type === "row" ? "cột" : "hàng";
+      const crossType = line.type === "row" ? "col" : "row";
       const others = reasons.map((r) => r.cell);
       const rays: Line[] = reasons.map((r) => ({ a: [r.src, 0], b: [r.cell, 0], kind: "ray" }));
       const boxUnits = [...new Set(reasons.filter((r) => r.via === "box").map((r) => 18 + boxOf(r.cell)))];
+      const crossUnit = (c: number) => (crossType === "col" ? 9 + colOf(c) : rowOf(c));
       const why = reasons
         .map((r) =>
           r.via === "cross"
-            ? `${cn(r.cell)} bị chặn vì ${crossName} ${(line.type === "row" ? colOf(r.cell) : rowOf(r.cell)) + 1} đã có ${d} (ở ${cn(r.src)})`
-            : `${cn(r.cell)} bị chặn vì khối ${boxOf(r.cell) + 1} đã có ${d} (ở ${cn(r.src)})`,
+            ? tr(
+                `${cn(r.cell)} bị chặn vì ${un(crossUnit(r.cell))} đã có ${d} (ở ${cn(r.src)})`,
+                `${cn(r.cell)} is blocked because ${un(crossUnit(r.cell))} already has a ${d} (at ${cn(r.src)})`,
+              )
+            : tr(
+                `${cn(r.cell)} bị chặn vì khối ${boxOf(r.cell) + 1} đã có ${d} (ở ${cn(r.src)})`,
+                `${cn(r.cell)} is blocked because box ${boxOf(r.cell) + 1} already has a ${d} (at ${cn(r.src)})`,
+              ),
         )
         .join("; ");
       const srcs = [...new Set(reasons.map((r) => r.src))];
       return [
         {
-          title: "Chọn một hàng/cột và một số",
-          text: `Xét số ${b(d)} trong ${un(line)}. ${cap(un(line))} chưa có số ${d} và còn ${others.length + 1} ô trống.`,
+          title: tr("Chọn một hàng/cột và một số", "Pick a row or column and a digit"),
+          text: tr(
+            `Xét số ${b(d)} trong ${un(line)}. ${cap(un(line))} chưa có số ${d} và còn ${others.length + 1} ô trống.`,
+            `Look at digit ${b(d)} in ${un(line)}. ${cap(un(line))} has no ${d} yet and ${others.length + 1} empty cells.`,
+          ),
           units: [line.id],
           cells: tint([...others, i.cell], "unit"),
         },
         {
-          title: "Loại từng ô",
-          text: `Kiểm tra từng ô trống: ${why}. Mỗi mũi tên đi từ số gây chặn (khoanh tròn) tới ô bị chặn.`,
+          title: tr("Loại từng ô", "Rule out each cell"),
+          text: tr(
+            `Kiểm tra từng ô trống: ${why}. Mỗi mũi tên đi từ số gây chặn (khoanh tròn) tới ô bị chặn.`,
+            `Check each empty cell: ${why}. Each arrow runs from a blocking digit (circled) to the cell it blocks.`,
+          ),
           units: [line.id, ...boxUnits],
           cells: [...tint(srcs, "pattern"), ...tint(others, "blocked"), [i.cell, "focus"]],
           rings: srcs,
           lines: rays,
         },
         {
-          title: "Điền số",
-          text: `Trong ${un(line)}, chỉ còn ${cn(i.cell)} nhận được số ${d} → ${cn(i.cell)} = ${b(d)}.`,
+          title: PLACE_TITLE(),
+          text: tr(
+            `Trong ${un(line)}, chỉ còn ${cn(i.cell)} nhận được số ${d} → ${cn(i.cell)} = ${b(d)}.`,
+            `In ${un(line)}, only ${cn(i.cell)} can still take a ${d} → ${cn(i.cell)} = ${b(d)}.`,
+          ),
           units: [line.id],
           cells: [...tint(srcs, "pattern"), ...tint(others, "blocked"), [i.cell, "focus"]],
           rings: srcs,
@@ -442,24 +506,37 @@ function framesFor(cand: Candidate): Frame[] {
           .sort();
       const filledPeers = [...new Set([...ru.cells, ...cu.cells, ...bu.cells].filter((c) => s.grid[c]))];
       const all = [...new Set([...has_(ru), ...has_(cu), ...has_(bu)])].sort();
-      const tally = { label: `Các số ${cn(i.cell)} nhìn thấy`, seen: all, missing: [i.digit as number] };
+      const tally = {
+        label: tr(`Các số ${cn(i.cell)} nhìn thấy`, `Digits ${cn(i.cell)} can see`),
+        seen: all,
+        missing: [i.digit as number],
+      };
       return [
         {
-          title: "Chọn một ô",
-          text: `Xét ô ${cn(i.cell)}. Ô này cùng lúc thuộc ${un(ru)}, ${un(cu)} và ${un(bu)} — ba đơn vị mà nó "nhìn thấy".`,
+          title: tr("Chọn một ô", "Pick a cell"),
+          text: tr(
+            `Xét ô ${cn(i.cell)}. Ô này cùng lúc thuộc ${un(ru)}, ${un(cu)} và ${un(bu)} — ba đơn vị mà nó "nhìn thấy".`,
+            `Look at cell ${cn(i.cell)}. It belongs to ${un(ru)}, ${un(cu)} and ${un(bu)} at the same time — the three units it "sees".`,
+          ),
           units: [ru.id, cu.id, bu.id],
           cells: [[i.cell, "focus"]],
         },
         {
-          title: "Gom các số đã thấy",
-          text: `${cap(un(ru))} có ${has_(ru).join(", ")}; ${un(cu)} có ${has_(cu).join(", ")}; ${un(bu)} có ${has_(bu).join(", ")}. Gạch các số này trên dải 1–9: được 8 số khác nhau.`,
+          title: tr("Gom các số đã thấy", "Collect the digits it sees"),
+          text: tr(
+            `${cap(un(ru))} có ${has_(ru).join(", ")}; ${un(cu)} có ${has_(cu).join(", ")}; ${un(bu)} có ${has_(bu).join(", ")}. Gạch các số này trên dải 1–9: được 8 số khác nhau.`,
+            `${cap(un(ru))} has ${has_(ru).join(", ")}; ${un(cu)} has ${has_(cu).join(", ")}; ${un(bu)} has ${has_(bu).join(", ")}. Cross them off the 1–9 strip: that is 8 different digits.`,
+          ),
           units: [ru.id, cu.id, bu.id],
           cells: [...tint(filledPeers, "pattern"), [i.cell, "focus"]],
           tally,
         },
         {
-          title: "Điền số",
-          text: `Chỉ còn thiếu số ${b(i.digit)} → ${cn(i.cell)} = ${b(i.digit)}. Ô này không cần so sánh với ô nào khác: nó chỉ còn đúng một khả năng.`,
+          title: PLACE_TITLE(),
+          text: tr(
+            `Chỉ còn thiếu số ${b(i.digit)} → ${cn(i.cell)} = ${b(i.digit)}. Ô này không cần so sánh với ô nào khác: nó chỉ còn đúng một khả năng.`,
+            `Only ${b(i.digit)} is missing → ${cn(i.cell)} = ${b(i.digit)}. No need to compare with other cells: this cell has exactly one option left.`,
+          ),
           units: [ru.id, cu.id, bu.id],
           cells: [...tint(filledPeers, "pattern"), [i.cell, "focus"]],
           places: [[i.cell, i.digit]],
@@ -494,11 +571,13 @@ function framesFor(cand: Candidate): Frame[] {
         }
       }
       const whyText = srcs.length
-        ? ` Các ô trống khác đều bị số ${d} ở ${cells(srcs)} (khoanh tròn) chặn.`
+        ? tr(
+            ` Các ô trống khác đều bị số ${d} ở ${cells(srcs)} (khoanh tròn) chặn.`,
+            ` Every other empty cell is blocked by the ${d} at ${cells(srcs)} (circled).`,
+          )
         : "";
       // Tia "chỉ hướng": từ nhóm ô bị khoá, dọc theo đơn vị cần dọn, tới ô bị loại xa nhất mỗi phía.
-      const sweepUnit = st.tech === "pointing" ? line : box;
-      const order = sweepUnit.cells;
+      const order = line.cells;
       const pIdx = pattern.map((c) => order.indexOf(c));
       const sweep: Line[] = [];
       if (st.tech === "pointing") {
@@ -509,31 +588,40 @@ function framesFor(cand: Candidate): Frame[] {
         if (before.length) sweep.push({ a: [order[lo], 0], b: [before.reduce((m, c) => (order.indexOf(c) < order.indexOf(m) ? c : m)), 0], kind: "ray" });
         if (after.length) sweep.push({ a: [order[hi], 0], b: [after.reduce((m, c) => (order.indexOf(c) > order.indexOf(m) ? c : m)), 0], kind: "ray" });
       }
+      const firstBase = {
+        cands: mark(pattern, d, "pattern"),
+        cells: [...tint(srcs, "pattern"), ...tint(blockedCells, "blocked"), ...tint(pattern, "pattern")],
+        rings: srcs,
+        lines: rays,
+      };
       const first: Frame =
         st.tech === "pointing"
           ? {
-              title: "Số bị khoá trong khối",
-              text: `Không còn ô nào điền được ngay. Nhìn số ${b(d)} trong ${un(box)}: nó chỉ có thể nằm ở ${cells(pattern)} — tất cả đều thuộc ${un(line)}.${whyText}`,
+              title: tr("Số bị khoá trong khối", "A digit locked in a box"),
+              text: tr(
+                `Không còn ô nào điền được ngay. Nhìn số ${b(d)} trong ${un(box)}: nó chỉ có thể nằm ở ${cells(pattern)} — tất cả đều thuộc ${un(line)}.${whyText}`,
+                `No cell can be filled directly any more. Look at digit ${b(d)} in ${un(box)}: it can only go in ${cells(pattern)} — all of them in ${un(line)}.${whyText}`,
+              ),
               units: [box.id],
-              cands: mark(pattern, d, "pattern"),
-              cells: [...tint(srcs, "pattern"), ...tint(blockedCells, "blocked"), ...tint(pattern, "pattern")],
-              rings: srcs,
-              lines: rays,
+              ...firstBase,
             }
           : {
-              title: "Số bị khoá trong hàng/cột",
-              text: `Không còn ô nào điền được ngay. Nhìn số ${b(d)} trong ${un(line)}: nó chỉ có thể nằm ở ${cells(pattern)} — tất cả đều thuộc ${un(box)}.${whyText}`,
+              title: tr("Số bị khoá trong hàng/cột", "A digit locked in a row or column"),
+              text: tr(
+                `Không còn ô nào điền được ngay. Nhìn số ${b(d)} trong ${un(line)}: nó chỉ có thể nằm ở ${cells(pattern)} — tất cả đều thuộc ${un(box)}.${whyText}`,
+                `No cell can be filled directly any more. Look at digit ${b(d)} in ${un(line)}: it can only go in ${cells(pattern)} — all of them in ${un(box)}.${whyText}`,
+              ),
               units: [line.id],
-              cands: mark(pattern, d, "pattern"),
-              cells: [...tint(srcs, "pattern"), ...tint(blockedCells, "blocked"), ...tint(pattern, "pattern")],
-              rings: srcs,
-              lines: rays,
+              ...firstBase,
             };
       const second: Frame =
         st.tech === "pointing"
           ? {
-              title: "Loại ứng viên",
-              text: `Dù ${d} rơi vào ô nào trong số đó, số ${d} của ${un(line)} chắc chắn nằm bên trong ${un(box)}. Nhóm ô này "chỉ" dọc theo ${un(line)} (mũi tên) và chặn phần còn lại: loại ${elimsText(st)}.`,
+              title: ELIM_TITLE(),
+              text: tr(
+                `Dù ${d} rơi vào ô nào trong số đó, số ${d} của ${un(line)} chắc chắn nằm bên trong ${un(box)}. Nhóm ô này "chỉ" dọc theo ${un(line)} (mũi tên) và chặn phần còn lại: loại ${elimsText(st)}.`,
+                `Whichever of those cells gets the ${d}, the ${d} of ${un(line)} is certainly inside ${un(box)}. The group "points" along ${un(line)} (arrow) and blocks the rest of it: remove ${elimsText(st)}.`,
+              ),
               units: [box.id, line.id],
               cands: mark(pattern, d, "pattern"),
               cells: [...tint(pattern, "pattern"), ...tint(Ec, "elim")],
@@ -541,8 +629,11 @@ function framesFor(cand: Candidate): Frame[] {
               elims: E,
             }
           : {
-              title: "Loại ứng viên",
-              text: `Số ${d} của ${un(box)} vì thế buộc phải nằm trên ${un(line)}, trong nhóm ô tô xanh. Các ô khác của ${un(box)} không thể là ${d}: loại ${elimsText(st)}.`,
+              title: ELIM_TITLE(),
+              text: tr(
+                `Số ${d} của ${un(box)} vì thế buộc phải nằm trên ${un(line)}, trong nhóm ô tô xanh. Các ô khác của ${un(box)} không thể là ${d}: loại ${elimsText(st)}.`,
+                `So the ${d} of ${un(box)} must lie on ${un(line)}, in the green cells. The other cells of ${un(box)} cannot be ${d}: remove ${elimsText(st)}.`,
+              ),
               units: [box.id, line.id],
               cands: mark(pattern, d, "pattern"),
               cells: [...tint(pattern, "pattern"), ...tint(Ec, "elim")],
@@ -553,24 +644,36 @@ function framesFor(cand: Candidate): Frame[] {
     case "naked-pair":
     case "naked-triple": {
       const ds = i.digits as number[];
-      const unitsTxt = joinVi(i.units.map((u: number) => un(u)));
+      const unitsTxt = join(i.units.map((u: number) => un(u)));
       const pair = st.tech === "naked-pair";
       const partial = !pair && i.cells.some((c: number) => popcount(s.cands[c]) < 3);
       const marks = i.cells.flatMap((c: number) => digitsOf(s.cands[c]).map((d) => [c, d, "pattern"] as CandMark));
       const first: Frame = {
-        title: pair ? "Tìm hai ô cùng cặp số" : "Tìm ba ô dùng chung ba số",
+        title: pair ? tr("Tìm hai ô cùng cặp số", "Find two cells with the same pair") : tr("Tìm ba ô dùng chung ba số", "Find three cells sharing three digits"),
         text: pair
-          ? `Trong ${un(i.units[0])}, hai ô ${cells(i.cells)} đều chỉ có đúng hai ứng viên ${nums(ds)}.`
-          : `Trong ${un(i.units[0])}, ba ô ${cells(i.cells)} chỉ chứa các ứng viên thuộc bộ ${nums(ds)}: ba ô, ba số.${partial ? " Không ô nào bắt buộc phải có đủ cả ba số; chỉ cần gộp lại đúng ba số là đủ." : ""}`,
+          ? tr(
+              `Trong ${un(i.units[0])}, hai ô ${cells(i.cells)} đều chỉ có đúng hai ứng viên ${nums(ds)}.`,
+              `In ${un(i.units[0])}, the two cells ${cells(i.cells)} both have exactly the two candidates ${nums(ds)}.`,
+            )
+          : tr(
+              `Trong ${un(i.units[0])}, ba ô ${cells(i.cells)} chỉ chứa các ứng viên thuộc bộ ${nums(ds)}: ba ô, ba số.${partial ? " Không ô nào bắt buộc phải có đủ cả ba số; chỉ cần gộp lại đúng ba số là đủ." : ""}`,
+              `In ${un(i.units[0])}, the three cells ${cells(i.cells)} contain only candidates from ${nums(ds)}: three cells, three digits.${partial ? " No cell needs all three; it is enough that together they hold exactly three digits." : ""}`,
+            ),
         units: i.units,
         cells: tint(i.cells, "pattern"),
         cands: marks,
       };
       const second: Frame = {
-        title: "Loại ứng viên",
+        title: ELIM_TITLE(),
         text: pair
-          ? `Hai số ${nums(ds)} sẽ lấp đúng hai ô này (chưa biết ô nào nhận số nào), nên không ô nào khác trong ${unitsTxt} được chứa chúng: loại ${elimsText(st)}.`
-          : `Ba số ${nums(ds)} sẽ lấp đúng ba ô này, nên không ô nào khác trong ${unitsTxt} được chứa chúng: loại ${elimsText(st)}.`,
+          ? tr(
+              `Hai số ${nums(ds)} sẽ lấp đúng hai ô này (chưa biết ô nào nhận số nào), nên không ô nào khác trong ${unitsTxt} được chứa chúng: loại ${elimsText(st)}.`,
+              `The digits ${nums(ds)} will fill exactly these two cells (we don't know which goes where yet), so no other cell in ${unitsTxt} can hold them: remove ${elimsText(st)}.`,
+            )
+          : tr(
+              `Ba số ${nums(ds)} sẽ lấp đúng ba ô này, nên không ô nào khác trong ${unitsTxt} được chứa chúng: loại ${elimsText(st)}.`,
+              `The digits ${nums(ds)} will fill exactly these three cells, so no other cell in ${unitsTxt} can hold them: remove ${elimsText(st)}.`,
+            ),
         units: i.units,
         cells: [...tint(i.cells, "pattern"), ...tint(Ec, "elim")],
         cands: marks,
@@ -585,19 +688,31 @@ function framesFor(cand: Candidate): Frame[] {
       const u = UNITS[i.unit];
       const marks = i.cells.flatMap((c: number) => ds.filter((d) => has(s.cands[c], d)).map((d) => [c, d, "pattern"] as CandMark));
       const first: Frame = {
-        title: pair ? "Tìm hai số chỉ có hai chỗ" : "Tìm ba số chỉ có ba chỗ",
+        title: pair ? tr("Tìm hai số chỉ có hai chỗ", "Find two digits with only two places") : tr("Tìm ba số chỉ có ba chỗ", "Find three digits with only three places"),
         text: pair
-          ? `Trong ${un(u)}, số ${b(ds[0])} chỉ có thể ở ${cells(i.cells)}; số ${b(ds[1])} cũng chỉ có thể ở đúng hai ô đó.`
-          : `Trong ${un(u)}, ba số ${nums(ds)} chỉ xuất hiện trong ba ô ${cells(i.cells)}.`,
+          ? tr(
+              `Trong ${un(u)}, số ${b(ds[0])} chỉ có thể ở ${cells(i.cells)}; số ${b(ds[1])} cũng chỉ có thể ở đúng hai ô đó.`,
+              `In ${un(u)}, digit ${b(ds[0])} can only go in ${cells(i.cells)}; digit ${b(ds[1])} can only go in those same two cells.`,
+            )
+          : tr(
+              `Trong ${un(u)}, ba số ${nums(ds)} chỉ xuất hiện trong ba ô ${cells(i.cells)}.`,
+              `In ${un(u)}, the digits ${nums(ds)} appear only in the three cells ${cells(i.cells)}.`,
+            ),
         units: [u.id],
         cells: tint(i.cells, "pattern"),
         cands: marks,
       };
       const second: Frame = {
-        title: "Dọn ứng viên thừa",
+        title: tr("Dọn ứng viên thừa", "Clear the extra candidates"),
         text: pair
-          ? `Hai ô này phải dành cho ${nums(ds)}, nên mọi ứng viên khác trong chúng đều bị loại: loại ${elimsText(st)}. Cặp ẩn giờ trở thành cặp lộ.`
-          : `Ba ô này phải dành cho ${nums(ds)}, nên mọi ứng viên khác trong chúng đều bị loại: loại ${elimsText(st)}.`,
+          ? tr(
+              `Hai ô này phải dành cho ${nums(ds)}, nên mọi ứng viên khác trong chúng đều bị loại: loại ${elimsText(st)}. Cặp ẩn giờ trở thành cặp lộ.`,
+              `These two cells are reserved for ${nums(ds)}, so every other candidate in them goes: remove ${elimsText(st)}. The hidden pair is now a naked pair.`,
+            )
+          : tr(
+              `Ba ô này phải dành cho ${nums(ds)}, nên mọi ứng viên khác trong chúng đều bị loại: loại ${elimsText(st)}.`,
+              `These three cells are reserved for ${nums(ds)}, so every other candidate in them goes: remove ${elimsText(st)}.`,
+            ),
         units: [u.id],
         cells: tint(i.cells, "pattern"),
         cands: marks,
@@ -610,8 +725,12 @@ function framesFor(cand: Candidate): Frame[] {
       const d = i.digit as number;
       const bases = i.bases.map((u: number) => UNITS[u]);
       const covers = i.covers.map((u: number) => UNITS[u]);
-      const baseWord = bases[0].type === "row" ? "hàng" : "cột";
-      const coverWord = covers[0].type === "row" ? "hàng" : "cột";
+      const word = (t: string, plural = false) =>
+        t === "row" ? tr("hàng", plural ? "rows" : "row") : tr("cột", plural ? "columns" : "column");
+      const baseWord = word(bases[0].type);
+      const coverWord = word(covers[0].type);
+      const basesWord = word(bases[0].type, true);
+      const coversWord = word(covers[0].type, true);
       const pattern = i.cells as number[];
       const strong: Line[] = [];
       for (const bu of bases) {
@@ -629,24 +748,33 @@ function framesFor(cand: Candidate): Frame[] {
         const diagA = [p[0], q[1]];
         const diagB = [p[1], q[0]];
         const first: Frame = {
-          title: "Hai " + baseWord + " giống nhau",
-          text: `Số ${b(d)} trong ${baseWord} ${baseIdx[0]} chỉ có thể ở ${cells(p)}; trong ${baseWord} ${baseIdx[1]} cũng chỉ ở ${cells(q)} — cùng hai ${coverWord} ${joinVi(coverIdx)}.`,
+          title: tr("Hai " + baseWord + " giống nhau", "Two matching " + basesWord),
+          text: tr(
+            `Số ${b(d)} trong ${baseWord} ${baseIdx[0]} chỉ có thể ở ${cells(p)}; trong ${baseWord} ${baseIdx[1]} cũng chỉ ở ${cells(q)} — cùng hai ${coverWord} ${join(coverIdx)}.`,
+            `Digit ${b(d)} in ${baseWord} ${baseIdx[0]} can only go in ${cells(p)}; in ${baseWord} ${baseIdx[1]} only in ${cells(q)} — the same two ${coversWord}, ${join(coverIdx)}.`,
+          ),
           units: bases.map((u: (typeof UNITS)[number]) => u.id),
           cells: tint(pattern, "pattern"),
           cands: mark(pattern, d, "pattern"),
           lines: strong,
         };
         const second: Frame = {
-          title: "Chỉ có hai khả năng",
-          text: `Mỗi ${baseWord} cần đúng một số ${d}, và hai số này phải nằm ở hai ${coverWord} khác nhau. Vậy chỉ có hai cách: ${d} ở ${cells(diagA)} (màu xanh), hoặc ở ${cells(diagB)} (màu cam). Cách nào thì ${coverWord} ${joinVi(coverIdx)} cũng đã có ${d} nằm trong bốn góc này.`,
+          title: tr("Chỉ có hai khả năng", "Only two possibilities"),
+          text: tr(
+            `Mỗi ${baseWord} cần đúng một số ${d}, và hai số này phải nằm ở hai ${coverWord} khác nhau. Vậy chỉ có hai cách: ${d} ở ${cells(diagA)} (màu xanh), hoặc ở ${cells(diagB)} (màu cam). Cách nào thì ${coverWord} ${join(coverIdx)} cũng đã có ${d} nằm trong bốn góc này.`,
+            `Each ${baseWord} needs exactly one ${d}, and the two must sit in different ${coversWord}. So there are only two ways: ${d} at ${cells(diagA)} (blue), or at ${cells(diagB)} (orange). Either way, ${coversWord} ${join(coverIdx)} already get their ${d} from these four corners.`,
+          ),
           units: covers.map((u: (typeof UNITS)[number]) => u.id),
           cells: [...tint(diagA, "colorA"), ...tint(diagB, "colorB")],
           cands: [...mark(diagA, d, "colorA"), ...mark(diagB, d, "colorB")],
           lines: strong,
         };
         const third: Frame = {
-          title: "Loại ứng viên",
-          text: `Vì thế mọi ô khác trên ${coverWord} ${joinVi(coverIdx)} không thể là ${d}: mỗi ô bị loại nhìn thấy hai góc cùng ${coverWord} (đường chấm), mà một trong hai góc chắc chắn là ${d}. Loại ${elimsText(st)}.`,
+          title: ELIM_TITLE(),
+          text: tr(
+            `Vì thế mọi ô khác trên ${coverWord} ${join(coverIdx)} không thể là ${d}: mỗi ô bị loại nhìn thấy hai góc cùng ${coverWord} (đường chấm), mà một trong hai góc chắc chắn là ${d}. Loại ${elimsText(st)}.`,
+            `So no other cell in ${coversWord} ${join(coverIdx)} can be ${d}: each eliminated cell sees the two corners in its ${coverWord} (dotted lines), and one of them is certainly ${d}. Remove ${elimsText(st)}.`,
+          ),
           units: covers.map((u: (typeof UNITS)[number]) => u.id),
           cells: [...tint(pattern, "pattern"), ...tint(Ec, "elim")],
           cands: mark(pattern, d, "pattern"),
@@ -656,24 +784,33 @@ function framesFor(cand: Candidate): Frame[] {
         return [first, second, third, ...followFrame(third, follow)];
       }
       const first: Frame = {
-        title: "Ba " + baseWord + ", ba " + coverWord,
-        text: `Số ${b(d)} trong ${baseWord} ${joinVi(baseIdx)} chỉ nằm trong ba ${coverWord} ${joinVi(coverIdx)} (mỗi ${baseWord} có 2 hoặc 3 chỗ).`,
+        title: tr("Ba " + baseWord + ", ba " + coverWord, "Three " + basesWord + ", three " + coversWord),
+        text: tr(
+          `Số ${b(d)} trong ${baseWord} ${join(baseIdx)} chỉ nằm trong ba ${coverWord} ${join(coverIdx)} (mỗi ${baseWord} có 2 hoặc 3 chỗ).`,
+          `Digit ${b(d)} in ${basesWord} ${join(baseIdx)} lies only in the three ${coversWord} ${join(coverIdx)} (each ${baseWord} has 2 or 3 places).`,
+        ),
         units: bases.map((u: (typeof UNITS)[number]) => u.id),
         cells: tint(pattern, "pattern"),
         cands: mark(pattern, d, "pattern"),
         lines: strong,
       };
       const second: Frame = {
-        title: "Ba số chiếm trọn ba " + coverWord,
-        text: `Ba ${baseWord} này cần ba số ${d}, mỗi số một ${coverWord} khác nhau. Vì chỉ có ba ${coverWord} để chọn, mỗi ${coverWord} ${joinVi(coverIdx)} sẽ nhận đúng một số ${d} từ ba ${baseWord} trên.`,
+        title: tr("Ba số chiếm trọn ba " + coverWord, "Three digits take all three " + coversWord),
+        text: tr(
+          `Ba ${baseWord} này cần ba số ${d}, mỗi số một ${coverWord} khác nhau. Vì chỉ có ba ${coverWord} để chọn, mỗi ${coverWord} ${join(coverIdx)} sẽ nhận đúng một số ${d} từ ba ${baseWord} trên.`,
+          `These three ${basesWord} need three ${d}s, each in a different ${coverWord}. With only three ${coversWord} to choose from, each of ${coversWord} ${join(coverIdx)} gets exactly one ${d} from those ${basesWord}.`,
+        ),
         units: covers.map((u: (typeof UNITS)[number]) => u.id),
         cells: tint(pattern, "pattern"),
         cands: mark(pattern, d, "pattern"),
         lines: strong,
       };
       const third: Frame = {
-        title: "Loại ứng viên",
-        text: `Các ô khác trên ${coverWord} ${joinVi(coverIdx)} không còn chỗ cho ${d}: ${coverWord} của chúng đã dành ${d} cho các ô của mẫu hình (đường chấm). Loại ${elimsText(st)}.`,
+        title: ELIM_TITLE(),
+        text: tr(
+          `Các ô khác trên ${coverWord} ${join(coverIdx)} không còn chỗ cho ${d}: ${coverWord} của chúng đã dành ${d} cho các ô của mẫu hình (đường chấm). Loại ${elimsText(st)}.`,
+          `The other cells in ${coversWord} ${join(coverIdx)} have no room for ${d}: their ${coverWord} has already reserved its ${d} for the pattern cells (dotted lines). Remove ${elimsText(st)}.`,
+        ),
         units: covers.map((u: (typeof UNITS)[number]) => u.id),
         cells: [...tint(pattern, "pattern"), ...tint(Ec, "elim")],
         cands: mark(pattern, d, "pattern"),
@@ -687,30 +824,39 @@ function framesFor(cand: Candidate): Frame[] {
       const [l1, l2] = i.lines.map((u: number) => UNITS[u]);
       const [bA, bB] = i.bases as number[];
       const [tA, tB] = i.tops as number[];
-      const crossName = l1.type === "row" ? `cột ${colOf(bA) + 1}` : `hàng ${rowOf(bA) + 1}`;
+      const crossName = l1.type === "row" ? un(9 + colOf(bA)) : un(rowOf(bA));
       const pattern = [bA, tA, bB, tB];
       const strong: Line[] = [
         { a: [bA, d], b: [tA, d], kind: "strong" },
         { a: [bB, d], b: [tB, d], kind: "strong" },
       ];
       const first: Frame = {
-        title: "Hai liên kết mạnh",
-        text: `Số ${b(d)} trong ${un(l1)} chỉ có hai chỗ: ${cn(bA)} và ${cn(tA)}. Trong ${un(l2)} cũng chỉ có hai chỗ: ${cn(bB)} và ${cn(tB)}. Mỗi cặp là một liên kết mạnh: nếu ô này không phải ${d} thì ô kia chắc chắn là ${d}.`,
+        title: tr("Hai liên kết mạnh", "Two strong links"),
+        text: tr(
+          `Số ${b(d)} trong ${un(l1)} chỉ có hai chỗ: ${cn(bA)} và ${cn(tA)}. Trong ${un(l2)} cũng chỉ có hai chỗ: ${cn(bB)} và ${cn(tB)}. Mỗi cặp là một liên kết mạnh: nếu ô này không phải ${d} thì ô kia chắc chắn là ${d}.`,
+          `Digit ${b(d)} has only two places in ${un(l1)}: ${cn(bA)} and ${cn(tA)}. In ${un(l2)} it also has only two: ${cn(bB)} and ${cn(tB)}. Each pair is a strong link: if one cell is not ${d}, the other certainly is.`,
+        ),
         units: [l1.id, l2.id],
         cells: tint(pattern, "pattern"),
         cands: mark(pattern, d, "pattern"),
         lines: strong,
       };
       const second: Frame = {
-        title: "Chung một chân",
-        text: `${cn(bA)} và ${cn(bB)} cùng nằm trên ${crossName} (chân "toà nhà") nên nhiều nhất một ô là ${d}. Ô chân nào không phải ${d} thì đỉnh cùng hàng/cột với nó là ${d}. Suy ra ít nhất một trong hai đỉnh ${cn(tA)}, ${cn(tB)} là ${d}.`,
+        title: tr("Chung một chân", "A shared base"),
+        text: tr(
+          `${cn(bA)} và ${cn(bB)} cùng nằm trên ${crossName} (chân "toà nhà") nên nhiều nhất một ô là ${d}. Ô chân nào không phải ${d} thì đỉnh cùng hàng/cột với nó là ${d}. Suy ra ít nhất một trong hai đỉnh ${cn(tA)}, ${cn(tB)} là ${d}.`,
+          `${cn(bA)} and ${cn(bB)} both lie in ${crossName} (the "building" bases), so at most one of them is ${d}. Whichever base is not ${d}, the top in its line must be ${d}. So at least one of the tops ${cn(tA)}, ${cn(tB)} is ${d}.`,
+        ),
         cells: [...tint([bA, bB], "pattern"), ...tint([tA, tB], "colorA")],
         cands: [...mark([bA, bB], d, "pattern"), ...mark([tA, tB], d, "colorA")],
         lines: [...strong, { a: [bA, d], b: [bB, d], kind: "weak" }],
       };
       const third: Frame = {
-        title: "Loại ứng viên",
-        text: `Ô nào nhìn thấy cả hai đỉnh (đường chấm) đều không thể là ${d}: loại ${elimsText(st)}.`,
+        title: ELIM_TITLE(),
+        text: tr(
+          `Ô nào nhìn thấy cả hai đỉnh (đường chấm) đều không thể là ${d}: loại ${elimsText(st)}.`,
+          `Any cell that sees both tops (dotted lines) cannot be ${d}: remove ${elimsText(st)}.`,
+        ),
         cells: [...tint([bA, bB], "pattern"), ...tint([tA, tB], "colorA"), ...tint(Ec, "elim")],
         cands: [...mark([bA, bB], d, "pattern"), ...mark([tA, tB], d, "colorA")],
         lines: [...strong, { a: [bA, d], b: [bB, d], kind: "weak" }, ...sightLines(E, () => [[tA, d], [tB, d]])],
@@ -728,24 +874,33 @@ function framesFor(cand: Candidate): Frame[] {
         { a: [cy, d], b: [cEnd, d], kind: "strong" },
       ];
       const first: Frame = {
-        title: "Hai sợi dây",
-        text: `Số ${b(d)} trong ${un(i.row)} chỉ có hai chỗ: ${cn(rx)} và ${cn(rEnd)}. Trong ${un(i.col)} cũng chỉ có hai chỗ: ${cn(cy)} và ${cn(cEnd)}.`,
+        title: tr("Hai sợi dây", "Two strings"),
+        text: tr(
+          `Số ${b(d)} trong ${un(i.row)} chỉ có hai chỗ: ${cn(rx)} và ${cn(rEnd)}. Trong ${un(i.col)} cũng chỉ có hai chỗ: ${cn(cy)} và ${cn(cEnd)}.`,
+          `Digit ${b(d)} has only two places in ${un(i.row)}: ${cn(rx)} and ${cn(rEnd)}. In ${un(i.col)} it also has only two: ${cn(cy)} and ${cn(cEnd)}.`,
+        ),
         units: [i.row, i.col],
         cells: tint(pattern, "pattern"),
         cands: mark(pattern, d, "pattern"),
         lines: strong,
       };
       const second: Frame = {
-        title: "Nút thắt trong một khối",
-        text: `${cn(rx)} và ${cn(cy)} cùng nằm trong ${un(i.box)} nên không thể cùng là ${d}. Ô nào trong hai ô này không phải ${d} thì đầu dây bên kia là ${d}. Vậy ít nhất một trong hai đầu ${cn(rEnd)}, ${cn(cEnd)} là ${d}.`,
+        title: tr("Nút thắt trong một khối", "The knot in one box"),
+        text: tr(
+          `${cn(rx)} và ${cn(cy)} cùng nằm trong ${un(i.box)} nên không thể cùng là ${d}. Ô nào trong hai ô này không phải ${d} thì đầu dây bên kia là ${d}. Vậy ít nhất một trong hai đầu ${cn(rEnd)}, ${cn(cEnd)} là ${d}.`,
+          `${cn(rx)} and ${cn(cy)} are both in ${un(i.box)}, so they cannot both be ${d}. Whichever of them is not ${d}, the far end of its string is ${d}. So at least one of the ends ${cn(rEnd)}, ${cn(cEnd)} is ${d}.`,
+        ),
         units: [i.box],
         cells: [...tint([rx, cy], "pattern"), ...tint([rEnd, cEnd], "colorA")],
         cands: [...mark([rx, cy], d, "pattern"), ...mark([rEnd, cEnd], d, "colorA")],
         lines: [...strong, { a: [rx, d], b: [cy, d], kind: "weak" }],
       };
       const third: Frame = {
-        title: "Loại ứng viên",
-        text: `Ô nhìn thấy cả hai đầu dây (đường chấm) không thể là ${d}: loại ${elimsText(st)}.`,
+        title: ELIM_TITLE(),
+        text: tr(
+          `Ô nhìn thấy cả hai đầu dây (đường chấm) không thể là ${d}: loại ${elimsText(st)}.`,
+          `A cell that sees both string ends (dotted lines) cannot be ${d}: remove ${elimsText(st)}.`,
+        ),
         cells: [...tint([rx, cy], "pattern"), ...tint([rEnd, cEnd], "colorA"), ...tint(Ec, "elim")],
         cands: [...mark([rx, cy], d, "pattern"), ...mark([rEnd, cEnd], d, "colorA")],
         lines: [...strong, { a: [rx, d], b: [cy, d], kind: "weak" }, ...sightLines(E, () => [[rEnd, d], [cEnd, d]])],
@@ -772,27 +927,45 @@ function framesFor(cand: Candidate): Frame[] {
       ];
       const cellsT: [number, Color][] = [[P, "focus"], ...tint([A, B], "pattern")];
       const first: Frame = {
-        title: "Trục và hai càng",
+        title: tr("Trục và hai càng", "Pivot and pincers"),
         text: xyz
-          ? `Ô trục ${cn(P)} có ba ứng viên ${nums([x, y, z].sort())}. Nó nhìn thấy hai "càng": ${cn(A)} (${x}, ${z}) và ${cn(B)} (${y}, ${z}).`
-          : `Ô trục ${cn(P)} có đúng hai ứng viên ${nums([x, y])}. Nó nhìn thấy hai "càng": ${cn(A)} (${x}, ${z}) và ${cn(B)} (${y}, ${z}).`,
+          ? tr(
+              `Ô trục ${cn(P)} có ba ứng viên ${nums([x, y, z].sort())}. Nó nhìn thấy hai "càng": ${cn(A)} (${x}, ${z}) và ${cn(B)} (${y}, ${z}).`,
+              `The pivot ${cn(P)} has three candidates ${nums([x, y, z].sort())}. It sees two "pincers": ${cn(A)} (${x}, ${z}) and ${cn(B)} (${y}, ${z}).`,
+            )
+          : tr(
+              `Ô trục ${cn(P)} có đúng hai ứng viên ${nums([x, y])}. Nó nhìn thấy hai "càng": ${cn(A)} (${x}, ${z}) và ${cn(B)} (${y}, ${z}).`,
+              `The pivot ${cn(P)} has exactly two candidates ${nums([x, y])}. It sees two "pincers": ${cn(A)} (${x}, ${z}) and ${cn(B)} (${y}, ${z}).`,
+            ),
         cells: cellsT,
         cands: marks,
       };
       const second: Frame = {
-        title: "Xét mọi khả năng của trục",
+        title: tr("Xét mọi khả năng của trục", "Try every value of the pivot"),
         text: xyz
-          ? `Nếu ${cn(P)} = ${x} thì ${cn(A)} = ${z}. Nếu ${cn(P)} = ${y} thì ${cn(B)} = ${z}. Nếu ${cn(P)} = ${z} thì chính trục là ${z}. Vậy số ${b(z)} chắc chắn nằm ở một trong ba ô.`
-          : `Nếu ${cn(P)} = ${x} thì ${cn(A)} phải là ${z}. Nếu ${cn(P)} = ${y} thì ${cn(B)} phải là ${z}. Dù trục nhận số nào, ít nhất một càng là ${b(z)}.`,
+          ? tr(
+              `Nếu ${cn(P)} = ${x} thì ${cn(A)} = ${z}. Nếu ${cn(P)} = ${y} thì ${cn(B)} = ${z}. Nếu ${cn(P)} = ${z} thì chính trục là ${z}. Vậy số ${b(z)} chắc chắn nằm ở một trong ba ô.`,
+              `If ${cn(P)} = ${x}, then ${cn(A)} = ${z}. If ${cn(P)} = ${y}, then ${cn(B)} = ${z}. If ${cn(P)} = ${z}, the pivot itself is ${z}. So ${b(z)} is certainly in one of the three cells.`,
+            )
+          : tr(
+              `Nếu ${cn(P)} = ${x} thì ${cn(A)} phải là ${z}. Nếu ${cn(P)} = ${y} thì ${cn(B)} phải là ${z}. Dù trục nhận số nào, ít nhất một càng là ${b(z)}.`,
+              `If ${cn(P)} = ${x}, then ${cn(A)} must be ${z}. If ${cn(P)} = ${y}, then ${cn(B)} must be ${z}. Whatever the pivot is, at least one pincer is ${b(z)}.`,
+            ),
         cells: cellsT,
         cands: marks,
         lines: links,
       };
       const third: Frame = {
-        title: "Loại ứng viên",
+        title: ELIM_TITLE(),
         text: xyz
-          ? `Ô nhìn thấy cả ba ô — trục và hai càng (đường chấm) — không thể là ${z}: loại ${elimsText(st)}.`
-          : `Ô nhìn thấy cả hai càng (đường chấm) không thể là ${z}: loại ${elimsText(st)}.`,
+          ? tr(
+              `Ô nhìn thấy cả ba ô — trục và hai càng (đường chấm) — không thể là ${z}: loại ${elimsText(st)}.`,
+              `A cell that sees all three cells — the pivot and both pincers (dotted lines) — cannot be ${z}: remove ${elimsText(st)}.`,
+            )
+          : tr(
+              `Ô nhìn thấy cả hai càng (đường chấm) không thể là ${z}: loại ${elimsText(st)}.`,
+              `A cell that sees both pincers (dotted lines) cannot be ${z}: remove ${elimsText(st)}.`,
+            ),
         cells: [...cellsT, ...tint(Ec, "elim")],
         cands: marks,
         lines: [...links, ...sightLines(E, () => (xyz ? [[P, z], [A, z], [B, z]] : [[A, z], [B, z]]))],
@@ -813,8 +986,11 @@ function framesFor(cand: Candidate): Frame[] {
         [L2, x, "pattern2"],
       ];
       const first: Frame = {
-        title: "Hai ô giống hệt nhau",
-        text: `${cn(A)} và ${cn(B)} có cùng cặp ứng viên ${nums([x, y].sort())} nhưng không nhìn thấy nhau, nên chưa phải cặp lộ.`,
+        title: tr("Hai ô giống hệt nhau", "Two identical cells"),
+        text: tr(
+          `${cn(A)} và ${cn(B)} có cùng cặp ứng viên ${nums([x, y].sort())} nhưng không nhìn thấy nhau, nên chưa phải cặp lộ.`,
+          `${cn(A)} and ${cn(B)} have the same candidate pair ${nums([x, y].sort())} but do not see each other, so they are not a naked pair.`,
+        ),
         cells: tint([A, B], "pattern"),
         cands: marks.slice(0, 4),
       };
@@ -824,16 +1000,22 @@ function framesFor(cand: Candidate): Frame[] {
         { a: [B, x], b: [L2, x], kind: "weak" },
       ];
       const second: Frame = {
-        title: "Cây cầu nối",
-        text: `Trong ${un(i.linkUnit)}, số ${b(x)} chỉ có hai chỗ: ${cn(L1)} và ${cn(L2)}. ${cn(L1)} nhìn thấy ${cn(A)}, còn ${cn(L2)} nhìn thấy ${cn(B)}.`,
+        title: tr("Cây cầu nối", "The bridge"),
+        text: tr(
+          `Trong ${un(i.linkUnit)}, số ${b(x)} chỉ có hai chỗ: ${cn(L1)} và ${cn(L2)}. ${cn(L1)} nhìn thấy ${cn(A)}, còn ${cn(L2)} nhìn thấy ${cn(B)}.`,
+          `In ${un(i.linkUnit)}, digit ${b(x)} has only two places: ${cn(L1)} and ${cn(L2)}. ${cn(L1)} sees ${cn(A)}, and ${cn(L2)} sees ${cn(B)}.`,
+        ),
         units: [i.linkUnit],
         cells: [...tint([A, B], "pattern"), ...tint([L1, L2], "pattern2")],
         cands: marks,
         lines: links,
       };
       const third: Frame = {
-        title: "Loại ứng viên",
-        text: `Giả sử ${cn(A)} không phải ${y} → ${cn(A)} = ${x} → ${cn(L1)} ≠ ${x} → ${cn(L2)} = ${x} → ${cn(B)} ≠ ${x} → ${cn(B)} = ${y}. Vậy ít nhất một trong hai ô là ${b(y)}. Ô nhìn thấy cả hai (đường chấm) bị loại: ${elimsText(st)}.`,
+        title: ELIM_TITLE(),
+        text: tr(
+          `Giả sử ${cn(A)} không phải ${y} → ${cn(A)} = ${x} → ${cn(L1)} ≠ ${x} → ${cn(L2)} = ${x} → ${cn(B)} ≠ ${x} → ${cn(B)} = ${y}. Vậy ít nhất một trong hai ô là ${b(y)}. Ô nhìn thấy cả hai (đường chấm) bị loại: ${elimsText(st)}.`,
+          `Suppose ${cn(A)} is not ${y} → ${cn(A)} = ${x} → ${cn(L1)} ≠ ${x} → ${cn(L2)} = ${x} → ${cn(B)} ≠ ${x} → ${cn(B)} = ${y}. So at least one of the two cells is ${b(y)}. Cells that see both (dotted lines) lose it: remove ${elimsText(st)}.`,
+        ),
         units: [i.linkUnit],
         cells: [...tint([A, B], "pattern"), ...tint([L1, L2], "pattern2"), ...tint(Ec, "elim")],
         cands: marks,
@@ -849,15 +1031,21 @@ function framesFor(cand: Candidate): Frame[] {
       const all = [...A, ...Bc];
       const links: Line[] = (i.edges as [number, number][]).map(([p, q]) => ({ a: [p, d], b: [q, d], kind: "strong" }));
       const first: Frame = {
-        title: "Nối các liên kết mạnh",
-        text: `Với số ${b(d)}, tìm các đơn vị chỉ còn đúng hai chỗ cho ${d} và nối hai chỗ đó lại. Các liên kết nối tiếp nhau thành một chuỗi ${all.length} ô.`,
+        title: tr("Nối các liên kết mạnh", "Join the strong links"),
+        text: tr(
+          `Với số ${b(d)}, tìm các đơn vị chỉ còn đúng hai chỗ cho ${d} và nối hai chỗ đó lại. Các liên kết nối tiếp nhau thành một chuỗi ${all.length} ô.`,
+          `For digit ${b(d)}, find the units with exactly two places left for ${d} and connect those two places. The links join up into a chain of ${all.length} cells.`,
+        ),
         cells: tint(all, "pattern"),
         cands: mark(all, d, "pattern"),
         lines: links,
       };
       const second: Frame = {
-        title: "Tô hai màu xen kẽ",
-        text: `Trong mỗi liên kết, đúng một đầu là ${d}. Tô xen kẽ xanh – cam dọc chuỗi, ta có: hoặc mọi ô xanh là ${d}, hoặc mọi ô cam là ${d}.`,
+        title: tr("Tô hai màu xen kẽ", "Alternate two colours"),
+        text: tr(
+          `Trong mỗi liên kết, đúng một đầu là ${d}. Tô xen kẽ xanh – cam dọc chuỗi, ta có: hoặc mọi ô xanh là ${d}, hoặc mọi ô cam là ${d}.`,
+          `In each link exactly one end is ${d}. Colour the chain alternately blue and orange: either every blue cell is ${d}, or every orange cell is ${d}.`,
+        ),
         cells: [...tint(A, "colorA"), ...tint(Bc, "colorB")],
         cands: [...mark(A, d, "colorA"), ...mark(Bc, d, "colorB")],
         lines: links,
@@ -866,8 +1054,11 @@ function framesFor(cand: Candidate): Frame[] {
         const traps = i.traps as { cell: number; a: number; b: number }[];
         const t0 = traps[0];
         const third: Frame = {
-          title: "Bẫy giữa hai màu",
-          text: `${cn(t0.cell)} nhìn thấy cả ô xanh ${cn(t0.a)} lẫn ô cam ${cn(t0.b)} (đường chấm). Màu nào đúng thì ô này cũng thấy một số ${d}, nên không thể là ${d}. Loại ${elimsText(st)}.`,
+          title: tr("Bẫy giữa hai màu", "Trapped between colours"),
+          text: tr(
+            `${cn(t0.cell)} nhìn thấy cả ô xanh ${cn(t0.a)} lẫn ô cam ${cn(t0.b)} (đường chấm). Màu nào đúng thì ô này cũng thấy một số ${d}, nên không thể là ${d}. Loại ${elimsText(st)}.`,
+            `${cn(t0.cell)} sees both the blue cell ${cn(t0.a)} and the orange cell ${cn(t0.b)} (dotted lines). Whichever colour is true, it sees a ${d}, so it cannot be ${d}. Remove ${elimsText(st)}.`,
+          ),
           cells: [...tint(A, "colorA"), ...tint(Bc, "colorB"), ...tint(Ec, "elim")],
           cands: [...mark(A, d, "colorA"), ...mark(Bc, d, "colorB")],
           lines: [
@@ -883,11 +1074,14 @@ function framesFor(cand: Candidate): Frame[] {
       }
       const bad = i.bad === "A" ? A : Bc;
       const good = i.bad === "A" ? Bc : A;
-      const badName = i.bad === "A" ? "xanh" : "cam";
+      const badName = i.bad === "A" ? tr("xanh", "blue") : tr("cam", "orange");
       const [c1, c2] = i.clash as number[];
       const third: Frame = {
-        title: "Một màu tự mâu thuẫn",
-        text: `Hai ô ${badName} ${cn(c1)} và ${cn(c2)} lại nhìn thấy nhau — không thể cùng là ${d}. Vậy màu ${badName} sai: loại ${d} khỏi mọi ô ${badName}, và mọi ô màu còn lại chính là ${d}.`,
+        title: tr("Một màu tự mâu thuẫn", "A colour contradicts itself"),
+        text: tr(
+          `Hai ô ${badName} ${cn(c1)} và ${cn(c2)} lại nhìn thấy nhau — không thể cùng là ${d}. Vậy màu ${badName} sai: loại ${d} khỏi mọi ô ${badName}, và mọi ô màu còn lại chính là ${d}.`,
+          `Two ${badName} cells, ${cn(c1)} and ${cn(c2)}, see each other — they cannot both be ${d}. So ${badName} is false: remove ${d} from every ${badName} cell, and every cell of the other colour is ${d}.`,
+        ),
         cells: [...tint(bad, "elim"), ...tint(good, i.bad === "A" ? "colorB" : "colorA")],
         cands: mark(good, d, i.bad === "A" ? "colorB" : "colorA"),
         lines: links,
@@ -902,20 +1096,29 @@ function framesFor(cand: Candidate): Frame[] {
       const floor = i.floor as number[];
       const marks: CandMark[] = [...floor.flatMap((c) => [[c, x, "pattern"], [c, y, "pattern"]] as CandMark[]), [roof, x, "colorA"], [roof, y, "colorA"]];
       const first: Frame = {
-        title: "Hình chữ nhật trên hai khối",
-        text: `Bốn ô ${cells(i.cells)} tạo thành một hình chữ nhật nằm gọn trên 2 hàng, 2 cột và 2 khối. Ba ô trong đó chỉ có đúng hai ứng viên ${nums([x, y])}.`,
+        title: tr("Hình chữ nhật trên hai khối", "A rectangle across two boxes"),
+        text: tr(
+          `Bốn ô ${cells(i.cells)} tạo thành một hình chữ nhật nằm gọn trên 2 hàng, 2 cột và 2 khối. Ba ô trong đó chỉ có đúng hai ứng viên ${nums([x, y])}.`,
+          `The four cells ${cells(i.cells)} form a rectangle spanning exactly 2 rows, 2 columns and 2 boxes. Three of them have only the two candidates ${nums([x, y])}.`,
+        ),
         cells: [...tint(floor, "pattern"), [roof, "focus"]],
         cands: marks,
       };
       const second: Frame = {
-        title: "Mẫu hình chết",
-        text: `Nếu ô thứ tư ${cn(roof)} cũng chỉ còn ${x} hoặc ${y}, ta có thể hoán đổi ${x} ↔ ${y} ở cả bốn ô mà bàn cờ vẫn hợp lệ — đề sẽ có hai lời giải. Đề Sudoku chuẩn chỉ có một lời giải, nên điều đó không được xảy ra.`,
+        title: tr("Mẫu hình chết", "The deadly pattern"),
+        text: tr(
+          `Nếu ô thứ tư ${cn(roof)} cũng chỉ còn ${x} hoặc ${y}, ta có thể hoán đổi ${x} ↔ ${y} ở cả bốn ô mà bàn cờ vẫn hợp lệ — đề sẽ có hai lời giải. Đề Sudoku chuẩn chỉ có một lời giải, nên điều đó không được xảy ra.`,
+          `If the fourth cell ${cn(roof)} were also down to ${x} or ${y}, you could swap ${x} ↔ ${y} in all four cells and the grid would still be valid — the puzzle would have two solutions. A proper Sudoku has exactly one, so that cannot happen.`,
+        ),
         cells: [...tint(floor, "pattern"), [roof, "focus"]],
         cands: marks,
       };
       const third: Frame = {
-        title: "Loại ứng viên",
-        text: `Vậy ${cn(roof)} không được là ${x} hay ${y}: loại ${elimsText(st)}.`,
+        title: ELIM_TITLE(),
+        text: tr(
+          `Vậy ${cn(roof)} không được là ${x} hay ${y}: loại ${elimsText(st)}.`,
+          `So ${cn(roof)} cannot be ${x} or ${y}: remove ${elimsText(st)}.`,
+        ),
         cells: [...tint(floor, "pattern"), [roof, "elim"]],
         cands: marks,
         elims: E,
@@ -931,20 +1134,26 @@ function framesFor(cand: Candidate): Frame[] {
       const bv: number[] = [];
       for (let k = 0; k < 81; k++) if (!s.grid[k] && k !== c) bv.push(k);
       const first: Frame = {
-        title: "Gần như toàn ô hai ứng viên",
-        text: `Mọi ô trống đều chỉ còn đúng hai ứng viên, trừ ${cn(c)} có ba: ${nums(digitsOf(s.cands[c]))}.`,
+        title: tr("Gần như toàn ô hai ứng viên", "Almost all bivalue cells"),
+        text: tr(
+          `Mọi ô trống đều chỉ còn đúng hai ứng viên, trừ ${cn(c)} có ba: ${nums(digitsOf(s.cands[c]))}.`,
+          `Every empty cell has exactly two candidates, except ${cn(c)}, which has three: ${nums(digitsOf(s.cands[c]))}.`,
+        ),
         cells: [...tint(bv, "unit"), [c, "focus"]],
       };
       const second: Frame = {
-        title: "Tránh bẫy BUG",
-        text: `Nếu ${cn(c)} không phải ${d}, mọi số sẽ xuất hiện đúng hai lần trong mỗi hàng, cột, khối — trạng thái "BUG" luôn dẫn tới 0 hoặc từ 2 lời giải trở lên. Số ${b(d)} là số xuất hiện ba lần trong ${un(units[0])}, ${un(units[1])} và ${un(units[2])} của ô này.`,
+        title: tr("Tránh bẫy BUG", "Avoid the BUG"),
+        text: tr(
+          `Nếu ${cn(c)} không phải ${d}, mọi số sẽ xuất hiện đúng hai lần trong mỗi hàng, cột, khối — trạng thái "BUG" luôn dẫn tới 0 hoặc từ 2 lời giải trở lên. Số ${b(d)} là số xuất hiện ba lần trong ${un(units[0])}, ${un(units[1])} và ${un(units[2])} của ô này.`,
+          `If ${cn(c)} were not ${d}, every candidate would appear exactly twice in each row, column and box — a "BUG" state, which always has zero or at least two solutions. ${b(d)} is the digit that appears three times in this cell's ${un(units[0])}, ${un(units[1])} and ${un(units[2])}.`,
+        ),
         units: units.map((u) => u.id),
         cells: [[c, "focus"]],
         cands: mark(uniq, d, "pattern"),
       };
       const third: Frame = {
-        title: "Điền số",
-        text: `Để đề có đúng một lời giải, ${cn(c)} phải là ${b(d)}.`,
+        title: PLACE_TITLE(),
+        text: tr(`Để đề có đúng một lời giải, ${cn(c)} phải là ${b(d)}.`, `For the puzzle to have exactly one solution, ${cn(c)} must be ${b(d)}.`),
         units: units.map((u) => u.id),
         cells: [[c, "focus"]],
         cands: mark(uniq, d, "pattern"),
@@ -971,22 +1180,31 @@ function framesFor(cand: Candidate): Frame[] {
       marks[marks.length - 1] = [last, z, "colorA"];
       const walk = chain.map((l) => `${cn(l.cell)} = ${l.to}`).join(" → ");
       const f1: Frame = {
-        title: "Chuỗi ô hai ứng viên",
-        text: `Chuỗi ${chain.length} ô ${cells(cs)}: mỗi ô chỉ có hai ứng viên, ô sau nhìn thấy ô trước và có chung một số với nó. Hai đầu chuỗi đều chứa ${b(z)}.`,
+        title: tr("Chuỗi ô hai ứng viên", "A chain of bivalue cells"),
+        text: tr(
+          `Chuỗi ${chain.length} ô ${cells(cs)}: mỗi ô chỉ có hai ứng viên, ô sau nhìn thấy ô trước và có chung một số với nó. Hai đầu chuỗi đều chứa ${b(z)}.`,
+          `A chain of ${chain.length} cells ${cells(cs)}: each has only two candidates, and each sees the previous one and shares a digit with it. Both ends of the chain contain ${b(z)}.`,
+        ),
         cells: tint(cs, "pattern"),
         cands: marks,
         lines: links,
       };
       const f2: Frame = {
-        title: "Đi dọc chuỗi",
-        text: `Giả sử ${cn(first)} không phải ${z}. Khi đó: ${walk}. Nghĩa là nếu đầu này không phải ${z} thì đầu kia là ${z} — ít nhất một đầu chuỗi là ${b(z)}.`,
+        title: tr("Đi dọc chuỗi", "Walk the chain"),
+        text: tr(
+          `Giả sử ${cn(first)} không phải ${z}. Khi đó: ${walk}. Nghĩa là nếu đầu này không phải ${z} thì đầu kia là ${z} — ít nhất một đầu chuỗi là ${b(z)}.`,
+          `Suppose ${cn(first)} is not ${z}. Then: ${walk}. So if one end is not ${z}, the other end is ${z} — at least one end of the chain is ${b(z)}.`,
+        ),
         cells: [...tint(cs, "pattern"), ...tint([first, last], "focus")],
         cands: marks,
         lines: links,
       };
       const f3: Frame = {
-        title: "Loại ứng viên",
-        text: `Ô nhìn thấy cả hai đầu chuỗi (đường chấm) không thể là ${z}: loại ${elimsText(st)}.`,
+        title: ELIM_TITLE(),
+        text: tr(
+          `Ô nhìn thấy cả hai đầu chuỗi (đường chấm) không thể là ${z}: loại ${elimsText(st)}.`,
+          `A cell that sees both ends of the chain (dotted lines) cannot be ${z}: remove ${elimsText(st)}.`,
+        ),
         cells: [...tint(cs, "pattern"), ...tint([first, last], "focus"), ...tint(Ec, "elim")],
         cands: marks,
         lines: [...links, ...sightLines(E, () => [[first, z], [last, z]])],
@@ -1000,54 +1218,83 @@ function framesFor(cand: Candidate): Frame[] {
 
 // ---------- tóm tắt cho phần giải mẫu ----------
 
+function summaryText(st: Step): string {
+  const i = st.info;
+  switch (st.tech) {
+    case "full-house":
+      return tr(
+        `${cap(un(i.unit))} chỉ còn một ô trống: ${cn(i.cell)} = ${b(i.digit)}.`,
+        `${cap(un(i.unit))} has one empty cell left: ${cn(i.cell)} = ${b(i.digit)}.`,
+      );
+    case "hidden-single-box":
+    case "hidden-single-line":
+      return tr(
+        `Trong ${un(i.unit)}, số ${b(i.digit)} chỉ còn một chỗ: ${cn(i.cell)}.`,
+        `In ${un(i.unit)}, ${b(i.digit)} has only one place left: ${cn(i.cell)}.`,
+      );
+    case "naked-single":
+      return tr(`${cn(i.cell)} chỉ còn một ứng viên: ${b(i.digit)}.`, `${cn(i.cell)} has only one candidate left: ${b(i.digit)}.`);
+    case "pointing":
+      return tr(
+        `Số ${b(i.digit)} trong ${un(i.box)} nằm gọn trên ${un(i.line)} → loại ${elimsText(st)}.`,
+        `${b(i.digit)} in ${un(i.box)} is confined to ${un(i.line)} → remove ${elimsText(st)}.`,
+      );
+    case "claiming":
+      return tr(
+        `Số ${b(i.digit)} trong ${un(i.line)} nằm gọn trong ${un(i.box)} → loại ${elimsText(st)}.`,
+        `${b(i.digit)} in ${un(i.line)} is confined to ${un(i.box)} → remove ${elimsText(st)}.`,
+      );
+    case "naked-pair":
+    case "naked-triple":
+    case "naked-quad":
+      return tr(
+        `Bộ lộ ${nums(i.digits)} ở ${cells(i.cells)} → loại ${elimsText(st)}.`,
+        `Naked set ${nums(i.digits)} in ${cells(i.cells)} → remove ${elimsText(st)}.`,
+      );
+    case "hidden-pair":
+    case "hidden-triple":
+    case "hidden-quad":
+      return tr(
+        `Bộ ẩn ${nums(i.digits)} trong ${un(i.unit)} ở ${cells(i.cells)} → loại ${elimsText(st)}.`,
+        `Hidden set ${nums(i.digits)} in ${un(i.unit)} at ${cells(i.cells)} → remove ${elimsText(st)}.`,
+      );
+    default:
+      throw new Error("Giải mẫu không dùng " + st.tech);
+  }
+}
+
 function summarize(s: State, st: Step): WalkStep {
   const i = st.info;
-  const E = elimMarks(st);
-  let text = "";
   let cellsT: [number, Color][] = [];
   let cands: CandMark[] = [];
   switch (st.tech) {
     case "full-house":
-      text = `${cap(un(i.unit))} chỉ còn một ô trống: ${cn(i.cell)} = ${b(i.digit)}.`;
-      cellsT = [...tint(UNITS[i.unit].cells, "unit"), [i.cell, "focus"]];
-      break;
     case "hidden-single-box":
     case "hidden-single-line":
-      text = `Trong ${un(i.unit)}, số ${b(i.digit)} chỉ còn một chỗ: ${cn(i.cell)}.`;
       cellsT = [...tint(UNITS[i.unit].cells, "unit"), [i.cell, "focus"]];
       break;
     case "naked-single":
-      text = `${cn(i.cell)} chỉ còn một ứng viên: ${b(i.digit)}.`;
       cellsT = [[i.cell, "focus"]];
       break;
     case "pointing":
-      text = `Số ${b(i.digit)} trong ${un(i.box)} nằm gọn trên ${un(i.line)} → loại ${elimsText(st)}.`;
-      cellsT = [...tint(i.cells, "pattern"), ...tint(elimCells(st), "elim")];
-      cands = mark(i.cells, i.digit, "pattern");
-      break;
     case "claiming":
-      text = `Số ${b(i.digit)} trong ${un(i.line)} nằm gọn trong ${un(i.box)} → loại ${elimsText(st)}.`;
       cellsT = [...tint(i.cells, "pattern"), ...tint(elimCells(st), "elim")];
       cands = mark(i.cells, i.digit, "pattern");
       break;
     case "naked-pair":
     case "naked-triple":
     case "naked-quad":
-      text = `Bộ lộ ${nums(i.digits)} ở ${cells(i.cells)} → loại ${elimsText(st)}.`;
       cellsT = [...tint(i.cells, "pattern"), ...tint(elimCells(st), "elim")];
       cands = i.cells.flatMap((c: number) => digitsOf(s.cands[c]).map((d) => [c, d, "pattern"] as CandMark));
       break;
     case "hidden-pair":
     case "hidden-triple":
     case "hidden-quad":
-      text = `Bộ ẩn ${nums(i.digits)} trong ${un(i.unit)} ở ${cells(i.cells)} → loại ${elimsText(st)}.`;
       cellsT = tint(i.cells, "pattern");
       cands = i.cells.flatMap((c: number) => (i.digits as number[]).filter((d) => has(s.cands[c], d)).map((d) => [c, d, "pattern"] as CandMark));
       break;
-    default:
-      throw new Error("Giải mẫu không dùng " + st.tech);
   }
-  return { tech: st.tech, places: st.places, elims: E, text, cells: cellsT, cands };
+  return { tech: st.tech, places: st.places, elims: elimMarks(st), text: inBoth(() => summaryText(st)), cells: cellsT, cands };
 }
 
 // ---------- chạy ----------
@@ -1096,8 +1343,9 @@ for (const tech of WANTED) {
     console.warn("THIẾU ví dụ cho", tech);
     continue;
   }
-  const frames = framesFor(cand);
-  for (const f of frames) {
+  const frames = inBoth(() => framesFor(cand));
+  if (frames.vi.length !== frames.en.length) throw new Error(`${tech}: số khung hai ngôn ngữ lệch nhau`);
+  for (const f of [...frames.vi, ...frames.en]) {
     for (const [c, d] of f.places ?? [])
       if (cand.solution[c] !== d) throw new Error(`${tech}: điền sai ${cn(c)}=${d}`);
     for (const [c, d] of f.elims ?? [])
@@ -1121,7 +1369,7 @@ for (const tech of WANTED) {
     "điểm",
     cand.score.toFixed(1),
     cand.carried ? "(ứng viên mang từ bước trước)" : "",
-    frames.length,
+    frames.vi.length,
     "khung",
   );
 }

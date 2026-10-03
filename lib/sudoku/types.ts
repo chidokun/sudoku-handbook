@@ -1,4 +1,7 @@
 // Kiểu dữ liệu cho ví dụ minh hoạ (được sinh sẵn vào data/*.json).
+import type { Lang } from "./core";
+
+export type { Lang };
 
 export type Level = 1 | 2 | 3; // 3 = suy luận N bước
 
@@ -52,14 +55,14 @@ export interface Example {
   cands: number[]; // bitmask ứng viên, 0 cho ô đã có số
   showCands: boolean;
   carried: boolean; // ứng viên đã bị loại bớt bởi các bước trước
-  frames: Frame[];
+  frames: Record<Lang, Frame[]>;
 }
 
 export interface WalkStep {
   tech: string;
   places: [number, number][];
   elims: [number, number][];
-  text: string;
+  text: Record<Lang, string>;
   cells: [number, Color][];
   cands: CandMark[];
 }
