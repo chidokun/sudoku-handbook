@@ -21,15 +21,9 @@ Site được xuất tĩnh (`output: "export"`) ra thư mục `out/`. Workflow [
 
 Thiết lập một lần: vào **Settings → Pages → Build and deployment → Source**, chọn **GitHub Actions**.
 
-Workflow lấy đường dẫn con của site (ví dụ `/sudoku-handbook`) từ `actions/configure-pages` và truyền vào `PAGES_BASE_PATH`. Nếu sau này dùng tên miền riêng, đường dẫn này tự thành rỗng, không cần sửa code.
+Site chạy ở gốc tên miền riêng `sudoku.nguyentuan.dev` (cấu hình trong Settings → Pages → Custom domain), nên workflow build với `PAGES_BASE_PATH` rỗng. Nếu bỏ tên miền riêng và quay lại `chidokun.github.io/sudoku-handbook`, đổi `PAGES_BASE_PATH` trong workflow thành `/sudoku-handbook`.
 
-Thử bản build giống CI ở máy:
-
-```bash
-PAGES_BASE_PATH=/sudoku-handbook npm run build
-```
-
-Build không có `PAGES_BASE_PATH` rồi chạy `npm start` để xem thư mục `out/` ở gốc `/`.
+Xem thử bản build ở máy: `npm run build` rồi `npm start`.
 
 ## Dữ liệu ví dụ
 

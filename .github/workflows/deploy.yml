@@ -26,9 +26,7 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Configure Pages
-        id: pages
-        uses: actions/configure-pages@v6
+      - uses: actions/configure-pages@v6
 
       - run: npm ci
 
@@ -37,7 +35,9 @@ jobs:
       - name: Build static site
         run: npm run build
         env:
-          PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          # Site chạy ở gốc tên miền riêng sudoku.nguyentuan.dev nên không cần đường dẫn con.
+          # Nếu quay lại dùng <user>.github.io/<repo>, đặt PAGES_BASE_PATH: /<repo>.
+          PAGES_BASE_PATH: ""
           NEXT_TELEMETRY_DISABLED: 1
 
       - uses: actions/upload-pages-artifact@v5
